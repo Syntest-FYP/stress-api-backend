@@ -14,5 +14,5 @@ app.get("/", (req, res) => {
 
 const PORT = 3001;
 app.listen(PORT, () => {
-  console.log(`🚀 Load test server running on http://localhost:${PORT}`);
+  console.log(`Load test server running on http://localhost:${PORT}`);
 });
