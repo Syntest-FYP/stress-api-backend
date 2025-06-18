@@ -26,40 +26,20 @@ This is a **pre-project** that forms the groundwork for the final system. Develo
 
 ## Tech Stack
 
-- Node.js
-- Express
-- Axios (for making concurrent HTTP requests)
-- JavaScript (ES6+)
-- `perf_hooks` for latency measurement
+- **Backend:** Node.js, Express.js
+- **Load Engine:** Axios, perf_hooks
+- **Tooling:** Nodemon, ESLint, Prettier
+- **Planned:** Redis, PostgreSQL, Docker, Prometheus, Grafana
 
 ---
 
 ## Roadmap (Can change)
 
-### Phase 1: Core Engine (Completed)
-- Load test engine with concurrency and batching
-- Configurable API calls (method, headers, body)
-- Basic stats reporting
-
-### Phase 2: API Refactoring & Modularity
-- Organize backend into services, controllers, routes
-- Add input validation and error handling
-- Add RESTful API for test triggers and reporting
-
-### Phase 3: AI Test Generation (Upcoming)
-- Analyze API logs and suggest test cases
-- Basic clustering and pattern detection
-
-### Phase 4: Security & Monitoring
-- Add OWASP-based static vulnerability checks
-- Real-time monitoring via WebSocket or polling
-
-### Phase 5: Protocol Expansion
-- Add support for GraphQL, WebSocket, and gRPC
-
-### Phase 6: Dashboard & Reporting
-- Frontend UI with charts and logs
-- Exportable reports (JSON, CSV, PDF)
+Phase 1: Load Engine + Metrics Reporting
+Phase 2: Modular Architecture & Test Management
+Phase 3: AI Test Generation (Log-based)
+Phase 4: Security & Vulnerability Scanning
+Phase 5: Predictive Analytics & Optimization
 
 ---
 
