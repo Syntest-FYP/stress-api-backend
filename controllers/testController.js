@@ -1,11 +1,22 @@
-const loadTestService = require("../services/loadTestService");
+const runLoadTestEngine = require("../services/loadTester");
 
-exports.run = async (req, res) => {
+exports.runLoadTest = async (req, res) => {
   try {
-    const report = await loadTestService.runLoadTest(req.body);
-    res.json(report);
+    const config = req.body;
+
+    if (
+      !config.url ||
+      !config.method ||
+      !config.totalRequests ||
+      !config.concurrency
+    ) {
+      return res.status(400).json({ error: "Missing required fields." });
+    }
+
+    const result = await runLoadTestEngine(config);
+    res.status(200).json(result);
   } catch (error) {
-    console.error("Err running load test:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Test execution failed:", error);
+    res.status(500).json({ error: "Internal server error during load test." });
   }
 };
