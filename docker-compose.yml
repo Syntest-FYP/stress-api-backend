@@ -8,8 +8,8 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: youruser
-      POSTGRES_PASSWORD: yourpass
+      POSTGRES_USER: stressapisllgv
+      POSTGRES_PASSWORD: sllgv20hoptportgresheu
       POSTGRES_DB: stressdb
     volumes:
       - pgdata:/var/lib/postgresql/data
