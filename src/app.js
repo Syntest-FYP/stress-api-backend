@@ -10,6 +10,7 @@ const userRoutes = require("./routes/user.routes");
 const testRoutes = require("./routes/test.routes");
 const executionRoutes = require("./routes/execution.routes");
 const resultRoutes = require("./routes/result.routes");
+const parserRoutes = require('./routes/parser.routes');
 
 dotenv.config();
 
@@ -28,6 +29,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/tests", testRoutes);
 app.use("/api/executions", executionRoutes);
 app.use("/api/results", resultRoutes);
+app.use("/api/parser", parserRoutes);
+
 
 // Global error handler
 app.use((err, req, res, next) => {
