@@ -1,9 +1,10 @@
 const { parseApiDoc } = require('../services/apiDocParser');
 const fs = require('fs');
+const path = require('path');
 
 exports.parseApiDocFromFile = async (req, res) => {
   try {
-    const filePath = req.query.path;
+    const filePath = path.resolve(process.cwd(), req.query.path);
     if (!filePath || !fs.existsSync(filePath)) {
       return res.status(400).json({ error: 'File not found' });
     }

@@ -1,6 +1,7 @@
 const SwaggerParser = require('swagger-parser');
 const { Collection } = require('postman-collection');
 const fs = require('fs');
+const yaml = require('js-yaml');
 
 /**
  * Normalize OpenAPI/Swagger paths to a common structure
@@ -10,6 +11,7 @@ function normalizeOpenApi(api) {
   const paths = api.paths || {};
   for (const [path, methods] of Object.entries(paths)) {
     for (const [method, details] of Object.entries(methods)) {
+      if (typeof details !== 'object') continue;
       endpoints.push({
         path,
         method: method.toUpperCase(),
@@ -44,22 +46,36 @@ function normalizePostman(collection) {
 }
 
 /**
+ * Normalize custom endpoints format
+ */
+function normalizeCustomFormat(data) {
+  return data.endpoints.map(endpoint => ({
+    path: endpoint.path,
+    method: endpoint.method.toUpperCase(),
+    parameters: endpoint.parameters || [],
+    responses: endpoint.responses || {},
+    description: endpoint.description || '',
+    requestBody: endpoint.requestBody || undefined
+  }));
+}
+
+/**
  * Detects the format and parses the API documentation
  * @param {string|object} input - File path or JSON object
  * @returns {Promise<Array>} Normalized endpoints array
  */
 async function parseApiDoc(input) {
   let data = input;
-  // If input is a file path, read and parse it
+  
   if (typeof input === 'string') {
-    const fileContent = fs.readFileSync(input, 'utf8');
-    try {
-      data = JSON.parse(fileContent);
-    } catch (e) {
-      // Try YAML if JSON fails
-      const yaml = require('js-yaml');
-      data = yaml.load(fileContent);
-    }
+    const content = fs.readFileSync(input, 'utf8');
+    data = content.trim().startsWith('{') ? JSON.parse(content) : yaml.load(content);
+  }
+
+
+  // Detection priority
+  if (data.endpoints) {
+    return normalizeCustomFormat(data);
   }
 
   // Detect OpenAPI/Swagger
@@ -81,3 +97,6 @@ async function parseApiDoc(input) {
 module.exports = {
   parseApiDoc,
 };
+
+
+

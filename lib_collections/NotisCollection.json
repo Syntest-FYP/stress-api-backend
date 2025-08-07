@@ -1,0 +1,19 @@
+{
+	"info": {
+		"_postman_id": "ac6731f6-533c-4626-8d55-cd4268808b6a",
+		"name": "New Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "43516244",
+		"_collection_link": "https://zirwahkhalil.postman.co/workspace/Zirwah-Khalil's-Workspace~d67bc3eb-5eba-434a-8f4c-83ba8ad85eff/collection/43516244-ac6731f6-533c-4626-8d55-cd4268808b6a?action=share&source=collection_link&creator=43516244"
+	},
+	"item": [
+		{
+			"name": "New Request",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}
