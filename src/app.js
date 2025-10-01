@@ -82,6 +82,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/test-suites", suitesRoutes);
 app.use("/api/environments", environmentRoutes);
 
+console.log("Supabase URL:", process.env.SUPABASE_URL);
+console.log("Supabase KEY:", process.env.SUPABASE_KEY ? "Loaded" : "Missing");
+
+
 // Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
