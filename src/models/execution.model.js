@@ -1,10 +1,10 @@
 const { pool } = require('../config');
 
-const createExecution = async ({ test_id, started_at, finished_at, status, triggered_by, execution_context, k6_config, error_message }) => {
+const createExecution = async ({ test_id, started_at, finished_at, status, triggered_by, execution_context, k6_config, error_message, environment_id, environment_snapshot, data_management }) => {
   const result = await pool.query(
-    `INSERT INTO executions (test_id, started_at, finished_at, status, triggered_by, execution_context, k6_config, error_message, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *`,
-    [test_id, started_at, finished_at, status, triggered_by, execution_context, k6_config, error_message]
+    `INSERT INTO executions (test_id, started_at, finished_at, status, triggered_by, execution_context, k6_config, error_message, environment_id, environment_snapshot, data_management, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) RETURNING *`,
+    [test_id, started_at, finished_at, status, triggered_by, execution_context, k6_config, error_message, environment_id || null, environment_snapshot || null, data_management || null]
   );
   return result.rows[0];
 };

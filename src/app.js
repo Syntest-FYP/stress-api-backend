@@ -8,11 +8,11 @@ const session = require("express-session");
 
 const userRoutes = require("./routes/user.routes");
 const testRoutes = require("./routes/test.routes");
-const executionRoutes = require("./routes/execution.routes");
 const resultRoutes = require("./routes/result.routes");
 const parserRoutes = require("./routes/parser.routes");
 const authRoutes = require("./routes/auth.routes");
 const suitesRoutes = require("./routes/suite.routes");
+const environmentRoutes = require("./routes/environment.routes");
 
 dotenv.config();
 
@@ -76,11 +76,11 @@ app.get("/", (req, res) => {
 
 app.use("/api/users", userRoutes);
 app.use("/api/tests", testRoutes);
-app.use("/api/executions", executionRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/parser", parserRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/test-suites", suitesRoutes);
+app.use("/api/environments", environmentRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
