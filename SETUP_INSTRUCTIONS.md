@@ -70,3 +70,4 @@ And the registration API returns:
 ```
 
 This happens because Supabase can't validate the email without proper credentials.
+
