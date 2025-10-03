@@ -1,4 +1,4 @@
-const { pool } = require('../config');
+const { pool } = require('../config/postgres');
 
 const createResult = async ({ execution_id, metric_type, metric_name, metric_value, metric_unit, tags, timestamp, raw_data }) => {
   const result = await pool.query(

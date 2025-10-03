@@ -3,7 +3,8 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const pool = new Pool({
-  connectionString: process.env.PORTGRES_URL,
+  connectionString: process.env.POSTGRES_URL,
+  ssl: false,
 });
 
 module.exports = { pool };

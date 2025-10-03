@@ -45,10 +45,12 @@ async function getAllTestSuites(user_id) {
 
 // Get a test suite by ID
 async function getTestSuiteById(user_id, id) {
+  console.log('Looking for suite:', { suite_id: id, user_id: user_id });
   const result = await query(
     `SELECT * FROM test_suites WHERE id = $1 AND user_id = $2`,
     [id, user_id]
   );
+  console.log('Suite query result:', { rowCount: result.rowCount, found: result.rows[0] ? 'yes' : 'no' });
   return result.rows[0];
 }
 

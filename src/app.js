@@ -13,6 +13,7 @@ const parserRoutes = require("./routes/parser.routes");
 const authRoutes = require("./routes/auth.routes");
 const suitesRoutes = require("./routes/suite.routes");
 const environmentRoutes = require("./routes/environment.routes");
+const endpointRoutes = require("./routes/endpoint.routes");
 
 dotenv.config();
 
@@ -81,9 +82,9 @@ app.use("/api/parser", parserRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/test-suites", suitesRoutes);
 app.use("/api/environments", environmentRoutes);
+app.use("/api/endpoints", endpointRoutes);
 
-console.log("Supabase URL:", process.env.SUPABASE_URL);
-console.log("Supabase KEY:", process.env.SUPABASE_KEY ? "Loaded" : "Missing");
+
 
 
 // Global error handler

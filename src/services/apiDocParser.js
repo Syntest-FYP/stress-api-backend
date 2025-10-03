@@ -3,6 +3,44 @@ const { Collection } = require('postman-collection');
 const fs = require('fs');
 const yaml = require('js-yaml');
 
+function summarizeSchema(schema) {
+  if (!schema || typeof schema !== 'object') return undefined;
+  const summary = {};
+  if (schema.$ref) summary.$ref = schema.$ref;
+  if (schema.type) summary.type = schema.type;
+  if (schema.title) summary.title = schema.title;
+  if (schema.format) summary.format = schema.format;
+  if (schema.items) summary.items = summarizeSchema(schema.items);
+  return summary;
+}
+
+function summarizeRequestBody(requestBody) {
+  if (!requestBody || typeof requestBody !== 'object') return undefined;
+  const content = requestBody.content || {};
+  const result = {};
+  for (const [ct, media] of Object.entries(content)) {
+    result[ct] = {
+      schema: summarizeSchema(media && media.schema),
+      encoding: media && media.encoding ? Object.keys(media.encoding) : undefined,
+    };
+  }
+  return { required: requestBody.required || false, content: result };
+}
+
+function summarizeResponses(responses) {
+  const result = {};
+  if (!responses || typeof responses !== 'object') return result;
+  for (const [code, resp] of Object.entries(responses)) {
+    const content = (resp && resp.content) || {};
+    const csum = {};
+    for (const [ct, media] of Object.entries(content)) {
+      csum[ct] = { schema: summarizeSchema(media && media.schema) };
+    }
+    result[code] = { description: resp && resp.description, content: csum };
+  }
+  return result;
+}
+
 /**
  * Normalize OpenAPI/Swagger paths to a common structure
  */
@@ -16,9 +54,9 @@ function normalizeOpenApi(api) {
         path,
         method: method.toUpperCase(),
         parameters: details.parameters || [],
-        responses: details.responses || {},
+        responses: summarizeResponses(details.responses),
         description: details.summary || details.description || '',
-        requestBody: details.requestBody || undefined,
+        requestBody: summarizeRequestBody(details.requestBody),
       });
     }
   }
@@ -80,8 +118,8 @@ async function parseApiDoc(input) {
 
   // Detect OpenAPI/Swagger
   if (data.openapi || data.swagger) {
-    // Use swagger-parser to validate and dereference
-    const api = await SwaggerParser.dereference(data);
+    // Use swagger-parser bundle to avoid circular structures on deref
+    const api = await SwaggerParser.bundle(data);
     return normalizeOpenApi(api);
   }
 

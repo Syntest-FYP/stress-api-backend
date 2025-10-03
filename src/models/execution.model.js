@@ -1,4 +1,4 @@
-const { pool } = require('../config');
+const { pool } = require('../config/postgres');
 
 const createExecution = async ({ test_id, started_at, finished_at, status, triggered_by, execution_context, k6_config, error_message, environment_id, environment_snapshot, data_management }) => {
   const result = await pool.query(

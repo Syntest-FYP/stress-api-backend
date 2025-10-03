@@ -1,0 +1,5 @@
+{
+    "watch": ["src"],
+    "ignore": ["uploads/*", "public/uploads/*", "*.log"]
+  }
+  
