@@ -25,6 +25,7 @@ const schemas = {
       .length(6)
       .pattern(/^[0-9]+$/)
       .required(),
+    email: Joi.string().email().optional(),
   }),
 
   setupTOTP: Joi.object({

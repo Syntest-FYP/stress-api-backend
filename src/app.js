@@ -22,24 +22,44 @@ const app = express();
 
 // -------> MIDDLEWARE <-------
 
-app.use(express.json());
-app.use(morgan("dev"));
-
-const allowedOrigin =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"
-    : "https://nexdash.cyber1337x.dev";
+// CORS Configuration - FIXED to allow frontend on port 3001
+const allowedOrigins = [
+  'http://localhost:3001',
+  'http://localhost:3000', 
+  'https://nexdash.cyber1337x.dev'
+];
 
 app.use(
   cors({
     credentials: true,
-    origin: allowedOrigin,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (process.env.NODE_ENV === "development") {
+        // In development, allow localhost on any port
+        if (origin.startsWith('http://localhost')) {
+          return callback(null, true);
+        }
+      }
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      callback(new Error('Not allowed by CORS'));
+    },
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     exposedHeaders: ["set-cookie"],
   })
 );
 
+// Handle preflight requests
+app.options('*', cors());
+
+app.use(express.json());
+app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
@@ -82,14 +102,14 @@ app.use("/api/parser", parserRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/test-suites", suitesRoutes);
 
-console.log("Supabase URL:", process.env.SUPABASE_URL);
-console.log("Supabase KEY:", process.env.SUPABASE_KEY ? "Loaded" : "Missing");
-
-
 // Global error handler
 app.use((err, req, res, next) => {
+  console.error("Error:", err.message);
   console.error(err.stack);
-  res.status(500).json({ error: "Internal Server Error" });
+  res.status(err.status || 500).json({ 
+    error: err.message || "Internal Server Error",
+    ...(NODE_ENV === "development" && { stack: err.stack })
+  });
 });
 
 module.exports = app;

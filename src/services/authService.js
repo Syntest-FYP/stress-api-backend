@@ -45,6 +45,7 @@ class AuthService {
 
   // Register new user
   static async register(email, password) {
+    // Default signUp flow (email confirmation link)
     const { data, error } = await supabaseUser.auth.signUp({
       email,
       password,
@@ -58,6 +59,23 @@ class AuthService {
     }
 
     return data;
+  }
+
+  // Register via Email OTP (passwordless sign up)
+  static async registerWithEmailOTP(email) {
+    const { error } = await supabaseUser.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: "http://localhost:3001/auth/verify-otp",
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to send signup OTP");
+    }
+
+    return { success: true };
   }
 
   // Get user from access token
@@ -202,6 +220,19 @@ class AuthService {
     }
 
     return user.user?.user_metadata?.totp_enabled === true;
+  }
+
+  // Set/Update user password (admin)
+  static async setPassword(userId, newPassword) {
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    });
+
+    if (error) {
+      throw new Error(`Failed to set password: ${error.message}`);
+    }
+
+    return true;
   }
 }
 

@@ -29,10 +29,37 @@ class AuthController {
 
   static async register(req, res) {
     try {
-      const { email, password } = req.body;
+      const { email, password, via } = req.body;
 
       if (!email || !password) {
         return sendError(res, 400, "Email and password are required");
+      }
+
+      // If client requests OTP-based registration
+      if (via === "otp") {
+        await AuthService.registerWithEmailOTP(email);
+
+        // set verification_email cookie like login flow so verify-otp works
+        res.cookie("verification_email", email, {
+          httpOnly: true,
+          secure: NODE_ENV === "production",
+          sameSite: NODE_ENV === "production" ? "none" : "lax",
+          maxAge: 10 * 60 * 1000,
+          domain: COOKIE_DOMAIN,
+        });
+
+        // Store the intended password in session until OTP verification
+        if (!req.session) {
+          return sendError(res, 500, "Session not configured properly");
+        }
+        req.session.pendingPasswordForOTP = password;
+
+        return sendResponse(
+          res,
+          200,
+          "Signup OTP sent to email. Verify to complete registration.",
+          { requiresOTP: true }
+        );
       }
 
       const data = await AuthService.register(email, password);
@@ -52,9 +79,12 @@ class AuthController {
 
   static async verifyEmailOTP(req, res) {
     try {
-      const { otp } = req.body;
-      console.log("-->", req.cookies);
-      const email = req.cookies.verification_email;
+      const { otp, email: emailFromBody } = req.body;
+      console.log("[verifyEmailOTP] cookies:", req.cookies);
+      let email = req.cookies.verification_email;
+      if (!email && emailFromBody) {
+        email = emailFromBody;
+      }
 
       if (!email) {
         return sendError(
@@ -65,6 +95,18 @@ class AuthController {
       }
 
       const data = await AuthService.verifyEmailOTP(email, otp);
+
+      // If password was set during OTP registration, update it now
+      if (req.session && req.session.pendingPasswordForOTP && data?.user?.id) {
+        try {
+          await AuthService.setPassword(data.user.id, req.session.pendingPasswordForOTP);
+        } catch (e) {
+          console.error("[verifyEmailOTP] setPassword error:", e.message);
+        } finally {
+          delete req.session.pendingPasswordForOTP;
+        }
+      }
+
       const hasTOTP = await AuthService.isTOTPEnabled(email);
 
       if (hasTOTP) {
