@@ -1,4 +1,4 @@
-const { pool } = require('../config/postgres');
+const { pool } = require('../config');
 
 const createUser = async ({ username, email, password, api_key }) => {
   const result = await pool.query(
