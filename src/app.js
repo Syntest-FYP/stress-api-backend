@@ -28,7 +28,7 @@ app.use(morgan("dev"));
 
 const allowedOrigin =
   process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"
+    ? "http://localhost:3001" // Syntest frontend
     : "https://nexdash.cyber1337x.dev";
 
 app.use(

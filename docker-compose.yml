@@ -34,8 +34,8 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_DATABASE=stressdb
-      - DB_POSTGRESDB_USER=youruser
-      - DB_POSTGRESDB_PASSWORD=yourpass
+      - DB_POSTGRESDB_USER=stressapisllgv
+      - DB_POSTGRESDB_PASSWORD=sllgv20hoptportgresheu
     depends_on:
       - postgres
 
