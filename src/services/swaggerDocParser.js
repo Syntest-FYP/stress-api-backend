@@ -1,43 +1,69 @@
-const fs = require('fs');
-const path = require('path');
-const SwaggerParser = require('swagger-parser');
+const fs = require("fs");
+const yaml = require("js-yaml");
+const SwaggerParser = require("swagger-parser");
+const swagger2openapi = require("swagger2openapi");
 
 /**
- * Parses a Swagger/OpenAPI file and extracts endpoints
+ * Parses a Swagger/OpenAPI (3.0.x or 3.1.x) file and extracts endpoints
  * @param {string} filePath - Path to the Swagger/OpenAPI file
  * @returns {Promise<Array>} Normalized endpoints array
  */
 async function parseSwaggerFile(filePath) {
   try {
-    // Read and parse the file (supports both JSON and YAML)
-    const api = await SwaggerParser.dereference(filePath);
-    
+    // --- Read and parse file manually (JSON or YAML) ---
+    const content = fs.readFileSync(filePath, "utf8");
+    const rawSpec = yaml.load(content);
+
+    let specToParse;
+
+    // --- Detect OpenAPI 3.1.x and convert ---
+    if (rawSpec.openapi && rawSpec.openapi.startsWith("3.1")) {
+      console.log("Detected OpenAPI 3.1.x — converting to 3.0.3...");
+
+      const conversion = await new Promise((resolve, reject) => {
+        swagger2openapi.convertObj(
+          rawSpec,
+          { patch: true, warnOnly: true },
+          (err, options) => {
+            if (err) return reject(err);
+            resolve(options.openapi);
+          }
+        );
+      });
+
+      specToParse = conversion;
+    } else {
+      specToParse = rawSpec;
+    }
+
+    // --- Now safely parse using SwaggerParser ---
+    const api = await SwaggerParser.dereference(specToParse);
+
     const endpoints = [];
     const paths = api.paths || {};
 
-    // Iterate through all paths and methods
-    for (const [path, methods] of Object.entries(paths)) {
+    for (const [pathKey, methods] of Object.entries(paths)) {
       for (const [method, details] of Object.entries(methods)) {
-        if (typeof details !== 'object') continue;
+        if (typeof details !== "object") continue;
 
         endpoints.push({
-          path,
+          path: pathKey,
           method: method.toUpperCase(),
           parameters: details.parameters || [],
           responses: details.responses || {},
-          description: details.summary || details.description || '',
+          description: details.summary || details.description || "",
           requestBody: normalizeRequestBody(details.requestBody),
         });
       }
     }
 
+    console.log(`Parsed OpenAPI version: ${api.openapi}`);
     return endpoints;
   } catch (err) {
+    console.error("Swagger parsing failed:", err.message);
     throw new Error(`Swagger parsing failed: ${err.message}`);
   }
 }
-
-exports.parseSwaggerFile = parseSwaggerFile;
 
 /**
  * Normalizes Swagger requestBody to match Postman-like structure
@@ -45,33 +71,38 @@ exports.parseSwaggerFile = parseSwaggerFile;
 function normalizeRequestBody(requestBody) {
   if (!requestBody) return undefined;
 
-  // Handle JSON content
-  if (requestBody.content && requestBody.content['application/json']) {
+  // JSON body
+  if (requestBody.content && requestBody.content["application/json"]) {
     return {
-      mode: 'raw',
-      raw: JSON.stringify(requestBody.content['application/json'].schema || {}),
-      options: { raw: { language: 'json' } }
+      mode: "raw",
+      raw: JSON.stringify(requestBody.content["application/json"].schema || {}),
+      options: { raw: { language: "json" } },
     };
   }
 
-  // Handle form-data
-  if (requestBody.content && requestBody.content['multipart/form-data']) {
+  // Form-data
+  if (requestBody.content && requestBody.content["multipart/form-data"]) {
     const formdata = [];
-    const schema = requestBody.content['multipart/form-data'].schema;
-    
+    const schema = requestBody.content["multipart/form-data"].schema;
+
     if (schema && schema.properties) {
       for (const [key, prop] of Object.entries(schema.properties)) {
         formdata.push({
           key,
-          type: prop.type === 'string' && prop.format === 'binary' ? 'file' : 'text',
-          value: '',
-          description: prop.description || ''
+          type:
+            prop.type === "string" && prop.format === "binary"
+              ? "file"
+              : "text",
+          value: "",
+          description: prop.description || "",
         });
       }
     }
-    
-    return { mode: 'formdata', formdata };
+
+    return { mode: "formdata", formdata };
   }
 
   return undefined;
 }
+
+exports.parseSwaggerFile = parseSwaggerFile;
