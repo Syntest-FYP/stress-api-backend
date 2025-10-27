@@ -1,27 +1,29 @@
 const express = require("express");
 const router = express.Router();
 const {
-  listModules,
+  getCategories,
   generateTestsForModule,
   generateAllModules,
-  quickGenerate,
-  getModuleInfo,
+  generateSingleEndpointTests,
   analyzeContextQuality,
 } = require("../controllers/gentest.controller");
 const { verifyAuth } = require("../middleware/auth");
 
 router.use(verifyAuth);
 
-router.post("/modules/:suiteId", listModules);
+// Get categories from analyzed schema
+router.get("/categories/:suiteId", getCategories);
 
-router.post("/modules/:suiteId/:moduleName/tests", generateTestsForModule);
+// Generate tests for a specific category/module
+router.post("/modules/:suiteId/:categoryName/tests", generateTestsForModule);
 
+// Generate tests for all endpoints
 router.post("/generate-all/:suiteId", generateAllModules);
 
-router.post("/quick-generate/:suiteId", quickGenerate);
+// Generate tests for a single endpoint
+router.post("/single-endpoint/:suiteId", generateSingleEndpointTests);
 
-router.get("/modules/:suiteId/:moduleName/info", getModuleInfo);
-
+// Analyze context quality
 router.post("/context/analyze/:suiteId", analyzeContextQuality);
 
 module.exports = router;

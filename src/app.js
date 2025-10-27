@@ -16,6 +16,7 @@ const environmentRoutes = require("./routes/environment.routes");
 const endpointRoutes = require("./routes/endpoint.routes");
 const generateTestRoutes = require("./routes/gentest.routes");
 const specRoutes = require("./routes/spec.routes");
+const categoriesRoutes = require("./routes/categories.routes");
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ app.use(morgan("dev"));
 
 const allowedOrigin =
   process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"
+    ? "http://localhost:3001"
     : "https://nexdash.cyber1337x.dev";
 
 app.use(
@@ -87,6 +88,7 @@ app.use("/api/environments", environmentRoutes);
 app.use("/api/endpoints", endpointRoutes);
 app.use("/api/generate/tests", generateTestRoutes);
 app.use("/api/spec", specRoutes);
+app.use("/api/categories", categoriesRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

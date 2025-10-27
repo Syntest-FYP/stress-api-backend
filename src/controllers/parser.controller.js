@@ -2,6 +2,7 @@ const { parseApiDoc } = require("../services/apiDocParser");
 const EndpointService = require("../services/endpointService");
 const fs = require("fs");
 const path = require("path");
+const yaml = require("js-yaml");
 
 /**
  * Parse API doc from file path
@@ -36,6 +37,53 @@ exports.parseApiDocFromFile = async (req, res) => {
     res.json(endpoints);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getUploadedSpec = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const suiteId = req.query.suite_id;
+
+    if (!userId || !suiteId) {
+      return res.status(400).json({ error: "Missing suite_id or user ID" });
+    }
+
+    const suiteDir = path.join(process.cwd(), "uploads", userId, suiteId);
+    if (!fs.existsSync(suiteDir)) {
+      return res
+        .status(404)
+        .json({ error: "No uploaded spec found for this suite" });
+    }
+
+    // Check for supported spec files
+    const candidates = ["spec.json", "spec.yaml", "spec.yml"];
+    const fileName = candidates.find((name) =>
+      fs.existsSync(path.join(suiteDir, name))
+    );
+
+    if (!fileName) {
+      return res.status(404).json({ error: "Spec file not found in uploads" });
+    }
+
+    const filePath = path.join(suiteDir, fileName);
+    const fileExt = path.extname(fileName).toLowerCase();
+
+    let spec;
+    const fileContent = fs.readFileSync(filePath, "utf8");
+
+    if (fileExt === ".json") {
+      spec = JSON.parse(fileContent);
+    } else {
+      spec = yaml.load(fileContent);
+    }
+
+    return res.json(spec);
+  } catch (err) {
+    console.error("Error fetching uploaded spec:", err.message);
+    res
+      .status(500)
+      .json({ error: "Failed to load spec file", details: err.message });
   }
 };
 
