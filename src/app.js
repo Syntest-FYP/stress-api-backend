@@ -17,6 +17,7 @@ const endpointRoutes = require("./routes/endpoint.routes");
 const generateTestRoutes = require("./routes/gentest.routes");
 const specRoutes = require("./routes/spec.routes");
 const categoriesRoutes = require("./routes/categories.routes");
+const chatRoutes = require("./routes/chat.routes");
 
 dotenv.config();
 
@@ -89,6 +90,7 @@ app.use("/api/endpoints", endpointRoutes);
 app.use("/api/generate/tests", generateTestRoutes);
 app.use("/api/spec", specRoutes);
 app.use("/api/categories", categoriesRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

@@ -1,5 +1,6 @@
 const { parseApiDoc } = require("../services/apiDocParser");
 const EndpointService = require("../services/endpointService");
+const { analyzeSpecService } = require("../services/specService");
 const fs = require("fs");
 const path = require("path");
 const yaml = require("js-yaml");
@@ -24,14 +25,45 @@ exports.parseApiDocFromFile = async (req, res) => {
             req.query.suite_id,
             endpoints
           );
+
+        // Automatically analyze the spec after successful import
+        let analysisResult = null;
+        try {
+          console.log("Starting automatic spec analysis...");
+          analysisResult = await analyzeSpecService(
+            req.user.id,
+            req.query.suite_id
+          );
+          console.log("Spec analysis completed successfully");
+        } catch (analysisErr) {
+          console.error("Analysis error:", analysisErr.message);
+          // Don't fail the whole request if analysis fails
+          console.log("Continuing without analysis results");
+        }
+
         return res.json({
           parsed: endpoints.length,
           inserted: collection ? collection.total_endpoints : 0,
           endpoints: collection ? collection.endpoints : [],
           collection_id: collection ? collection._id : null,
+          analysis: analysisResult
+            ? {
+                analyzed: true,
+                suite_id: analysisResult.suite_id,
+                spec_file: analysisResult.spec_file,
+                analysis_summary: analysisResult.analysis,
+              }
+            : { analyzed: false },
         });
       } catch (e) {
         console.error("Import error:", e.message);
+        return res.json({
+          parsed: endpoints.length,
+          inserted: 0,
+          endpoints: endpoints,
+          importError: e.message,
+          analysis: { analyzed: false },
+        });
       }
     }
     res.json(endpoints);
@@ -144,9 +176,22 @@ exports.uploadAndParseSpec = async (req, res) => {
             endpoints
           );
 
+        // Automatically analyze the spec after successful import
+        let analysisResult = null;
+        try {
+          console.log("Starting automatic spec analysis...");
+          analysisResult = await analyzeSpecService(userId, suiteId);
+          console.log("Spec analysis completed successfully");
+        } catch (analysisErr) {
+          console.error("Analysis error:", analysisErr.message);
+          // Don't fail the whole request if analysis fails
+          console.log("Continuing without analysis results");
+        }
+
         return res.json({
           success: true,
-          message: "File uploaded and endpoints imported successfully",
+          message:
+            "File uploaded, endpoints imported, and spec analyzed successfully",
           file: {
             originalName: req.file.originalname,
             filename: newFileName,
@@ -158,6 +203,14 @@ exports.uploadAndParseSpec = async (req, res) => {
           inserted: collection ? collection.total_endpoints : 0,
           endpoints: collection ? collection.endpoints : [],
           collection_id: collection ? collection._id : null,
+          analysis: analysisResult
+            ? {
+                analyzed: true,
+                suite_id: analysisResult.suite_id,
+                spec_file: analysisResult.spec_file,
+                analysis_summary: analysisResult.analysis,
+              }
+            : { analyzed: false },
         });
       } catch (importErr) {
         console.error("Import error:", importErr.message);
@@ -179,6 +232,7 @@ exports.uploadAndParseSpec = async (req, res) => {
           inserted: 0,
           endpoints: endpoints,
           importError: importErr.message,
+          analysis: { analyzed: false },
         });
       }
     }
@@ -196,6 +250,7 @@ exports.uploadAndParseSpec = async (req, res) => {
       },
       parsed: endpoints.length,
       endpoints: endpoints,
+      analysis: { analyzed: false },
     });
   } catch (err) {
     // Clean up uploaded file on error
