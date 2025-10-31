@@ -1,6 +1,7 @@
 const axios = require("axios");
 const EndpointCollection = require("../models/Endpoint");
 const { getSpecAnalysisBySuite } = require("../models/spec.model");
+const GeneratedTest = require("../models/generated_test.model");
 
 // Configuration
 const PYTHON_BACKEND_URL =
@@ -17,17 +18,18 @@ const getCategories = async (req, res) => {
 
     // Get analyzed schema for this suite
     const analysis = await getSpecAnalysisBySuite(suiteId);
-    
+
     if (!analysis) {
       return res.status(404).json({
         success: false,
-        message: "No analyzed schema found for this suite. Please analyze a schema first.",
+        message:
+          "No analyzed schema found for this suite. Please analyze a schema first.",
       });
     }
 
     // Extract categories from the analysis
     const categories = analysis.analysis?.insights?.categories || [];
-    
+
     if (!categories || categories.length === 0) {
       return res.status(404).json({
         success: false,
@@ -41,12 +43,12 @@ const getCategories = async (req, res) => {
         categories: categories,
         total_categories: categories.length,
         suite_id: suiteId,
-        analysis_date: analysis.created_at
+        analysis_date: analysis.created_at,
       },
       metadata: {
         suite_id: suiteId,
-        categories_available: categories.length
-      }
+        categories_available: categories.length,
+      },
     });
   } catch (error) {
     console.error("[ERROR] getCategories:", error.message);
@@ -85,22 +87,25 @@ const generateTestsForModule = async (req, res) => {
 
     // Get analyzed schema for this suite
     const analysis = await getSpecAnalysisBySuite(suiteId);
-    
+
     if (!analysis) {
       return res.status(404).json({
         success: false,
-        message: "No analyzed schema found for this suite. Please analyze a schema first.",
+        message:
+          "No analyzed schema found for this suite. Please analyze a schema first.",
       });
     }
 
     // Check if the category exists in the analyzed schema
     const categories = analysis.analysis?.insights?.categories || [];
-    const categoryExists = categories.some(cat => 
-      cat.name && cat.name.toLowerCase() === categoryName.toLowerCase()
+    const categoryExists = categories.some(
+      (cat) => cat.name && cat.name.toLowerCase() === categoryName.toLowerCase()
     );
 
     if (!categoryExists) {
-      const availableCategories = categories.map(cat => cat.name).filter(Boolean);
+      const availableCategories = categories
+        .map((cat) => cat.name)
+        .filter(Boolean);
       return res.status(404).json({
         success: false,
         message: `Category '${categoryName}' not found in analyzed schema.`,
@@ -157,6 +162,30 @@ const generateTestsForModule = async (req, res) => {
       }
     );
 
+    // Persist generated tests
+    try {
+      await GeneratedTest.create({
+        user_id: userId.toString(),
+        suite_id: suiteId,
+        source: "module",
+        category_name: categoryName,
+        request_options: {
+          test_count,
+          auth_requirements: auth_requirements || null,
+          code_context: code_context || null,
+          data_providers: data_providers || null,
+          entity_relationships: entity_relationships || null,
+        },
+        tests: response.data?.test_cases || response.data?.tests || null,
+        raw_response: response.data || null,
+      });
+    } catch (persistErr) {
+      console.error(
+        "[WARN] Failed to persist generated module tests:",
+        persistErr.message
+      );
+    }
+
     return res.status(200).json({
       success: true,
       data: response.data,
@@ -164,7 +193,7 @@ const generateTestsForModule = async (req, res) => {
         suite_id: suiteId,
         category_name: categoryName,
         test_count: test_count,
-        from_analyzed_schema: true
+        from_analyzed_schema: true,
       },
     });
   } catch (error) {
@@ -212,11 +241,12 @@ const generateAllModules = async (req, res) => {
 
     // Get analyzed schema for this suite
     const analysis = await getSpecAnalysisBySuite(suiteId);
-    
+
     if (!analysis) {
       return res.status(404).json({
         success: false,
-        message: "No analyzed schema found for this suite. Please analyze a schema first.",
+        message:
+          "No analyzed schema found for this suite. Please analyze a schema first.",
       });
     }
 
@@ -268,13 +298,36 @@ const generateAllModules = async (req, res) => {
       }
     );
 
+    // Persist generated tests
+    try {
+      await GeneratedTest.create({
+        user_id: userId.toString(),
+        suite_id: suiteId,
+        source: "all",
+        request_options: {
+          test_count,
+          auth_requirements: auth_requirements || null,
+          code_context: code_context || null,
+          data_providers: data_providers || null,
+          entity_relationships: entity_relationships || null,
+        },
+        tests: response.data?.test_cases || response.data?.tests || null,
+        raw_response: response.data || null,
+      });
+    } catch (persistErr) {
+      console.error(
+        "[WARN] Failed to persist generated all-endpoints tests:",
+        persistErr.message
+      );
+    }
+
     return res.status(200).json({
       success: true,
       data: response.data,
       metadata: {
         suite_id: suiteId,
         test_count: test_count,
-        from_analyzed_schema: true
+        from_analyzed_schema: true,
       },
     });
   } catch (error) {
@@ -331,11 +384,12 @@ const generateSingleEndpointTests = async (req, res) => {
 
     // Get analyzed schema for this suite
     const analysis = await getSpecAnalysisBySuite(suiteId);
-    
+
     if (!analysis) {
       return res.status(404).json({
         success: false,
-        message: "No analyzed schema found for this suite. Please analyze a schema first.",
+        message:
+          "No analyzed schema found for this suite. Please analyze a schema first.",
       });
     }
 
@@ -360,6 +414,36 @@ const generateSingleEndpointTests = async (req, res) => {
       }
     );
 
+    // Persist generated tests
+    try {
+      await GeneratedTest.create({
+        user_id: userId.toString(),
+        suite_id: suiteId,
+        source: "single",
+        endpoint: {
+          method: endpoint.method,
+          path: endpoint.path,
+          base_url: endpoint.base_url || null,
+          headers: endpoint.headers || {},
+          query_params: endpoint.query_params || {},
+        },
+        request_options: {
+          test_count,
+          auth_requirements: auth_requirements || null,
+          code_context: code_context || null,
+          data_providers: data_providers || null,
+          entity_relationships: entity_relationships || null,
+        },
+        tests: response.data?.test_cases || response.data?.tests || null,
+        raw_response: response.data || null,
+      });
+    } catch (persistErr) {
+      console.error(
+        "[WARN] Failed to persist generated single-endpoint tests:",
+        persistErr.message
+      );
+    }
+
     return res.status(200).json({
       success: true,
       data: response.data,
@@ -367,7 +451,7 @@ const generateSingleEndpointTests = async (req, res) => {
         suite_id: suiteId,
         endpoint: endpoint,
         test_count: test_count,
-        from_analyzed_schema: true
+        from_analyzed_schema: true,
       },
     });
   } catch (error) {
@@ -406,11 +490,12 @@ const analyzeContextQuality = async (req, res) => {
 
     // Get analyzed schema for this suite
     const analysis = await getSpecAnalysisBySuite(suiteId);
-    
+
     if (!analysis) {
       return res.status(404).json({
         success: false,
-        message: "No analyzed schema found for this suite. Please analyze a schema first.",
+        message:
+          "No analyzed schema found for this suite. Please analyze a schema first.",
       });
     }
 
@@ -466,7 +551,7 @@ const analyzeContextQuality = async (req, res) => {
       data: response.data,
       metadata: {
         suite_id: suiteId,
-        from_analyzed_schema: true
+        from_analyzed_schema: true,
       },
     });
   } catch (error) {
@@ -488,10 +573,46 @@ const analyzeContextQuality = async (req, res) => {
   }
 };
 
+/**
+ * Get stored generated tests for a suite
+ * GET /api/generate/tests/stored/:suiteId
+ */
+const getStoredGeneratedTests = async (req, res) => {
+  try {
+    const { suiteId } = req.params;
+    const userId = req.user._id || req.user.id;
+
+    const items = await GeneratedTest.find({
+      user_id: userId.toString(),
+      suite_id: suiteId,
+    })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: items,
+      metadata: {
+        suite_id: suiteId,
+        count: items.length,
+      },
+    });
+  } catch (error) {
+    console.error("[ERROR] getStoredGeneratedTests:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch stored generated tests",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCategories,
   generateTestsForModule,
   generateAllModules,
   generateSingleEndpointTests,
   analyzeContextQuality,
+  getStoredGeneratedTests,
 };

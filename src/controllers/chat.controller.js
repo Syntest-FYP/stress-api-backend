@@ -81,40 +81,6 @@ exports.postChatMessage = async (req, res) => {
 
     const endpoints = transformEndpoints(collection.endpoints);
 
-    // If user asked to describe endpoints, handle directly using DB (reliable without schema)
-    const wantsDescribe =
-      /\b(describe|show|list|overview)\b/i.test(message) &&
-      /\b(endpoints?|api)\b/i.test(message);
-    if (wantsDescribe && endpoints.length) {
-      // Build a concise description
-      const total = endpoints.length;
-      const preview = endpoints.slice(0, Math.min(20, total));
-      const lines = [
-        `Here are your API endpoints (showing ${preview.length} of ${total}):`,
-      ];
-      preview.forEach((ep, idx) => {
-        lines.push(`${idx + 1}. [${ep.method}] ${ep.path}`);
-      });
-      if (total > preview.length) {
-        lines.push(`... and ${total - preview.length} more`);
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: {
-          action: "describe_modules",
-          message: lines.join("\n"),
-          endpoints_attached: true,
-          schema_attached: false, // will be updated below in normal flow when schema is used
-          suggestions: [
-            "Generate tests for all endpoints",
-            "Generate tests for a specific endpoint",
-            "Generate comprehensive test suite",
-          ],
-        },
-      });
-    }
-
     // Try to load actual schema file (not analysis)
     let schema = null;
     try {
@@ -186,45 +152,24 @@ exports.postChatMessage = async (req, res) => {
     const hasSchema = Boolean(
       schema && (schema.paths || schema.openapi || schema.swagger)
     );
-    const hasEndpoints = enrichedEndpoints.length > 0;
 
     if (!sessionId && chatData.session_id) {
       chatData.session_id = chatData.session_id;
     }
 
     chatData.schema_attached = hasSchema;
-    chatData.endpoints_attached = hasEndpoints;
-
     // Log for debugging
     console.log(
-      `[CHAT] Schema attached: ${hasSchema}, Endpoints attached: ${hasEndpoints} (${enrichedEndpoints.length} total)`
+      `[CHAT] Schema attached: ${hasSchema}, Endpoints: ${enrichedEndpoints.length}`
     );
 
-    // Only suggest schema upload if we have endpoints but no schema
-    // Don't show generic warning if endpoints exist - they're enough for basic operations
-    if (
-      !hasSchema &&
-      hasEndpoints &&
-      chatData &&
-      typeof chatData === "object"
-    ) {
-      // Update message to clarify endpoints are available
-      if (
-        chatData.message &&
-        chatData.message.includes("No endpoints attached")
-      ) {
-        chatData.message = chatData.message.replace(
-          "No endpoints attached",
-          `${enrichedEndpoints.length} endpoints available (schema recommended for better results)`
-        );
-      }
-
+    if (!hasSchema && chatData && typeof chatData === "object") {
       chatData.suggestions = Array.isArray(chatData.suggestions)
         ? chatData.suggestions
         : [];
       if (!chatData.suggestions.find((s) => /schema/i.test(s))) {
         chatData.suggestions.unshift(
-          "Upload an OpenAPI schema for enhanced test generation"
+          "Upload/Analyze your OpenAPI schema for better tests"
         );
       }
     }

@@ -6,6 +6,7 @@ const {
   generateAllModules,
   generateSingleEndpointTests,
   analyzeContextQuality,
+  getStoredGeneratedTests,
 } = require("../controllers/gentest.controller");
 const { verifyAuth } = require("../middleware/auth");
 
@@ -25,5 +26,8 @@ router.post("/single-endpoint/:suiteId", generateSingleEndpointTests);
 
 // Analyze context quality
 router.post("/context/analyze/:suiteId", analyzeContextQuality);
+
+// Get stored generated tests for a suite
+router.get("/stored/:suiteId", getStoredGeneratedTests);
 
 module.exports = router;
