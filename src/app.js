@@ -18,6 +18,7 @@ const generateTestRoutes = require("./routes/gentest.routes");
 const specRoutes = require("./routes/spec.routes");
 const categoriesRoutes = require("./routes/categories.routes");
 const chatRoutes = require("./routes/chat.routes");
+const securityRoutes = require("./routes/security.routes");
 
 dotenv.config();
 
@@ -30,15 +31,27 @@ const app = express();
 app.use(express.json());
 app.use(morgan("dev"));
 
-const allowedOrigin =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3001"
-    : "https://nexdash.cyber1337x.dev";
+
+// Replace the allowedOrigin section with this:
+const allowedOrigins = [
+  "http://localhost:3001",
+  "http://127.0.0.1:3001",
+  "https://nexdash.cyber1337x.dev"
+];
 
 app.use(
   cors({
     credentials: true,
-    origin: allowedOrigin,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     exposedHeaders: ["set-cookie"],
@@ -91,6 +104,7 @@ app.use("/api/generate/tests", generateTestRoutes);
 app.use("/api/spec", specRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/security", securityRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

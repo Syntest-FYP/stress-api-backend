@@ -52,21 +52,37 @@ class AuthController {
 
   static async verifyEmailOTP(req, res) {
     try {
-      const { otp } = req.body;
-      console.log("-->", req.cookies);
-      const email = req.cookies.verification_email;
-
+      const { otp, email: emailFromBody } = req.body;
+      
+      // Try to get email from cookie first, fallback to request body
+      const email = req.cookies.verification_email || emailFromBody;
+      
+      //console.log("=== OTP Verification Attempt ===");
+      //console.log("All cookies:", req.cookies);
+      //console.log("Request body:", req.body);
+      //console.log("Email from cookie:", req.cookies.verification_email);
+      //console.log("Email from body:", emailFromBody);
+      //console.log("Using email:", email);
+      //console.log("OTP:", otp);
+      //console.log("================================");
+  
       if (!email) {
+        console.error("❌ No email found in cookie or body");
         return sendError(
           res,
           400,
-          "Verification session expired. Please login again."
+          "Email is required. Please login again."
         );
       }
-
+  
+      if (!otp) {
+        console.error("❌ No OTP provided");
+        return sendError(res, 400, "OTP is required");
+      }
+  
       const data = await AuthService.verifyEmailOTP(email, otp);
       const hasTOTP = await AuthService.isTOTPEnabled(email);
-
+  
       if (hasTOTP) {
         req.session.tempUserForTOTP = {
           email,
@@ -74,12 +90,12 @@ class AuthController {
           refresh_token: data.session.refresh_token,
           user: data.user,
         };
-
+  
         res.clearCookie("verification_email", { domain: COOKIE_DOMAIN });
-
+  
         return sendResponse(res, 200, "TOTP required", { requiresTOTP: true });
       }
-
+  
       res.cookie("access_token", data.session.access_token, {
         httpOnly: true,
         secure: NODE_ENV === "production",
@@ -87,7 +103,7 @@ class AuthController {
         maxAge: data.session.expires_in * 1000,
         domain: COOKIE_DOMAIN,
       });
-
+  
       res.cookie("refresh_token", data.session.refresh_token, {
         httpOnly: true,
         secure: NODE_ENV === "production",
@@ -95,15 +111,15 @@ class AuthController {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         domain: COOKIE_DOMAIN,
       });
-
+  
       res.clearCookie("verification_email", { domain: COOKIE_DOMAIN });
-
+  
       return sendResponse(res, 200, "Login successful", { user: data.user });
     } catch (error) {
+      console.error("OTP verification error:", error);
       return sendError(res, 401, error.message);
     }
   }
-
   static async loginWithTOTP(req, res) {
     try {
       const { email, password, totpToken } = req.body;

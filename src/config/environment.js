@@ -7,4 +7,5 @@ module.exports = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
   APP_NAME: process.env.APP_NAME || "NexDashSync",
+  AI_SERVICE_URL: process.env.AI_SERVICE_URL || "http://localhost:8000",
 };

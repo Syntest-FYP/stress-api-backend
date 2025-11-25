@@ -1,4 +1,5 @@
 const EndpointCollection = require('../models/Endpoint');
+const { normalizeQueryParams } = require('../utils/queryParamNormalizer');
 
 class EndpointService {
   // Create or update endpoint collection
@@ -11,7 +12,7 @@ class EndpointService {
       path: endpoint.path,
       base_url: endpoint.base_url || null,
       headers: endpoint.headers || {},
-      query_params: endpoint.query_params || endpoint.parameters || {},
+      query_params: normalizeQueryParams(endpoint.query_params || endpoint.parameters || {}),
       auth_type: endpoint.auth_type || null,
       tags: endpoint.tags || [],
       is_active: true
@@ -46,7 +47,7 @@ class EndpointService {
       path: endpointData.path,
       base_url: endpointData.base_url || null,
       headers: endpointData.headers || {},
-      query_params: endpointData.query_params || endpointData.parameters || {},
+      query_params: normalizeQueryParams(endpointData.query_params || endpointData.parameters || {}),
       auth_type: endpointData.auth_type || null,
       tags: endpointData.tags || [],
       is_active: true
@@ -87,6 +88,11 @@ class EndpointService {
 
   // Update specific endpoint in collection
   static async updateEndpointInCollection(user_id, suite_id, endpoint_id, updateData) {
+    const sanitizedUpdate = { ...updateData };
+    if (Object.prototype.hasOwnProperty.call(sanitizedUpdate, 'query_params')) {
+      sanitizedUpdate.query_params = normalizeQueryParams(sanitizedUpdate.query_params);
+    }
+
     const result = await EndpointCollection.findOneAndUpdate(
       { 
         user_id, 
@@ -95,7 +101,7 @@ class EndpointService {
       },
       {
         $set: {
-          'endpoints.$': { ...updateData, _id: endpoint_id },
+          'endpoints.$': { ...sanitizedUpdate, _id: endpoint_id },
           last_updated: new Date()
         }
       },
