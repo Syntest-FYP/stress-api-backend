@@ -1,0 +1,203 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Complex Vulnerable API",
+    "description": "Complex API with nested structures, arrays, and multiple parameter types",
+    "version": "2.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:9000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/api/v2/users/{user_id}/posts/{post_id}": {
+      "get": {
+        "summary": "Get User Post",
+        "description": "Nested path parameters - IDOR vulnerability",
+        "operationId": "get_user_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          },
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          },
+          {
+            "name": "include_comments",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "boolean", "default": false}
+          }
+        ],
+        "responses": {
+          "200": {"description": "Successful Response"}
+        }
+      }
+    },
+    "/api/v2/batch/users": {
+      "post": {
+        "summary": "Batch Create Users",
+        "description": "Mass assignment with array input",
+        "operationId": "batch_create_users",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "users": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "username": {"type": "string"},
+                        "password": {"type": "string"},
+                        "email": {"type": "string"},
+                        "role": {"type": "string", "default": "user"},
+                        "is_admin": {"type": "boolean", "default": false},
+                        "permissions": {
+                          "type": "array",
+                          "items": {"type": "string"}
+                        }
+                      },
+                      "required": ["username", "password", "email"]
+                    }
+                  }
+                },
+                "required": ["users"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Successful Response"}
+        }
+      }
+    },
+    "/api/v2/search/advanced": {
+      "post": {
+        "summary": "Advanced Search",
+        "description": "Complex query with nested filters - SQL Injection risk",
+        "operationId": "advanced_search",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {"type": "string"},
+                  "filters": {
+                    "type": "object",
+                    "properties": {
+                      "status": {"type": "string"},
+                      "date_range": {
+                        "type": "object",
+                        "properties": {
+                          "start": {"type": "string", "format": "date"},
+                          "end": {"type": "string", "format": "date"}
+                        }
+                      },
+                      "tags": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                      }
+                    }
+                  },
+                  "sort": {
+                    "type": "object",
+                    "properties": {
+                      "field": {"type": "string"},
+                      "order": {"type": "string", "enum": ["asc", "desc"]}
+                    }
+                  }
+                },
+                "required": ["query"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Successful Response"}
+        }
+      }
+    },
+    "/api/v2/files/{file_id}/download": {
+      "get": {
+        "summary": "Download File",
+        "description": "Path traversal and SSRF vulnerability",
+        "operationId": "download_file",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "redirect_url",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string", "format": "uri"}
+          }
+        ],
+        "responses": {
+          "200": {"description": "Successful Response"},
+          "302": {"description": "Redirect"}
+        }
+      }
+    },
+    "/api/v2/admin/users/{user_id}/permissions": {
+      "put": {
+        "summary": "Update User Permissions",
+        "description": "Privilege escalation vulnerability",
+        "operationId": "update_permissions",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "permissions": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  },
+                  "role": {"type": "string"},
+                  "is_super_admin": {"type": "boolean"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Successful Response"}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}
+

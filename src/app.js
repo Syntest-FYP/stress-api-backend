@@ -18,7 +18,7 @@ const generateTestRoutes = require("./routes/gentest.routes");
 const specRoutes = require("./routes/spec.routes");
 const categoriesRoutes = require("./routes/categories.routes");
 const chatRoutes = require("./routes/chat.routes");
-const securityRoutes = require("./routes/security.routes");
+const securityScanRoutes = require("./routes/securityScan.routes");
 
 dotenv.config();
 
@@ -28,16 +28,15 @@ const app = express();
 
 // -------> MIDDLEWARE <-------
 
-app.use(express.json());
-app.use(morgan("dev"));
-
-
-// Replace the allowedOrigin section with this:
+// CORS MUST be first to handle preflight requests properly
 const allowedOrigins = [
   "http://localhost:3001",
   "http://127.0.0.1:3001",
   "https://nexdash.cyber1337x.dev"
 ];
+
+const NODE_ENV = process.env.NODE_ENV || "development";
+const isDevelopment = NODE_ENV === "development";
 
 app.use(
   cors({
@@ -52,16 +51,32 @@ app.use(
         callback(new Error('Not allowed by CORS'));
       }
     },
-    allowedHeaders: ["Content-Type", "Authorization"],
+    // Allow headers needed for multipart/form-data uploads
+    // Note: When using FormData, browser sets Content-Type with boundary automatically
+    allowedHeaders: [
+      "Content-Type",  // Required for multipart/form-data (browser sets with boundary)
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+      "Cache-Control"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     exposedHeaders: ["set-cookie"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   })
 );
 
+app.use(express.json());
+app.use(morgan("dev"));
+
+// Body parsers - NOTE: Do NOT use bodyParser for multipart/form-data
+// Multer handles that separately. Only parse JSON and URL-encoded
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const NODE_ENV = process.env.NODE_ENV || "development";
 const isProduction = NODE_ENV === "production";
 const COOKIE_DOMAIN =
   process.env.NODE_ENV === "development" ? undefined : ".cyber1337x.dev";
@@ -104,7 +119,7 @@ app.use("/api/generate/tests", generateTestRoutes);
 app.use("/api/spec", specRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/chat", chatRoutes);
-app.use("/api/security", securityRoutes);
+app.use("/api/security-scan", securityScanRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

@@ -6,7 +6,7 @@ services:
     container_name: pg
     restart: always
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Changed to 5433 to avoid conflict with Windows PostgreSQL service
     environment:
       POSTGRES_USER: stressapisllgv
       POSTGRES_PASSWORD: sllgv20hoptportgresheu
@@ -19,25 +19,26 @@ services:
     container_name: redis
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Changed to 6380 to avoid conflict with local Redis service on 6379
+    command: redis-server --requirepass sllgVD@
 
-  n8n:
-    image: n8nio/n8n
-    container_name: n8n
-    restart: always
-    ports:
-      - "5678:5678"
-    environment:
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=admin
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=stressdb
-      - DB_POSTGRESDB_USER=youruser
-      - DB_POSTGRESDB_PASSWORD=yourpass
-    depends_on:
-      - postgres
+  # n8n:
+  #   image: n8nio/n8n
+  #   container_name: n8n
+  #   restart: always
+  #   ports:
+  #     - "5678:5678"
+  #   environment:
+  #     - N8N_BASIC_AUTH_USER=admin
+  #     - N8N_BASIC_AUTH_PASSWORD=admin
+  #     - DB_TYPE=postgresdb
+  #     - DB_POSTGRESDB_HOST=postgres
+  #     - DB_POSTGRESDB_PORT=5432
+  #     - DB_POSTGRESDB_DATABASE=stressdb
+  #     - DB_POSTGRESDB_USER=youruser
+  #     - DB_POSTGRESDB_PASSWORD=yourpass
+  #   depends_on:
+      # - postgres
 
 volumes:
   pgdata:

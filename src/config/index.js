@@ -1,10 +1,5 @@
-const { Pool } = require('pg');
-const dotenv = require('dotenv');
-dotenv.config();
-
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-  ssl: false,
-});
+// Re-export pool from postgres.js to ensure single source of truth
+// This ensures all models using require('../config') get the correct connection
+const { pool } = require('./postgres');
 
 module.exports = { pool };

@@ -13,13 +13,18 @@ class AuthController {
       await AuthService.loginWithPassword(email, password);
       await AuthService.sendEmailOTP(email);
 
-      res.cookie("verification_email", email, {
+      const cookieOptions = {
         httpOnly: true,
         secure: NODE_ENV === "production",
         sameSite: NODE_ENV === "production" ? "none" : "lax",
         maxAge: 10 * 60 * 1000,
-        domain: COOKIE_DOMAIN,
-      });
+      };
+      
+      if (COOKIE_DOMAIN) {
+        cookieOptions.domain = COOKIE_DOMAIN;
+      }
+
+      res.cookie("verification_email", email, cookieOptions);
 
       return sendResponse(res, 200, "OTP sent to email");
     } catch (error) {
@@ -90,29 +95,33 @@ class AuthController {
           refresh_token: data.session.refresh_token,
           user: data.user,
         };
-  
-        res.clearCookie("verification_email", { domain: COOKIE_DOMAIN });
-  
+
+        res.clearCookie("verification_email", COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {});
+
         return sendResponse(res, 200, "TOTP required", { requiresTOTP: true });
       }
-  
+
+      const cookieOptions = {
+        httpOnly: true,
+        secure: NODE_ENV === "production",
+        sameSite: NODE_ENV === "production" ? "none" : "lax",
+      };
+      
+      if (COOKIE_DOMAIN) {
+        cookieOptions.domain = COOKIE_DOMAIN;
+      }
+
       res.cookie("access_token", data.session.access_token, {
-        httpOnly: true,
-        secure: NODE_ENV === "production",
-        sameSite: NODE_ENV === "production" ? "none" : "lax",
+        ...cookieOptions,
         maxAge: data.session.expires_in * 1000,
-        domain: COOKIE_DOMAIN,
       });
-  
+
       res.cookie("refresh_token", data.session.refresh_token, {
-        httpOnly: true,
-        secure: NODE_ENV === "production",
-        sameSite: NODE_ENV === "production" ? "none" : "lax",
+        ...cookieOptions,
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        domain: COOKIE_DOMAIN,
       });
-  
-      res.clearCookie("verification_email", { domain: COOKIE_DOMAIN });
+
+      res.clearCookie("verification_email", COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {});
   
       return sendResponse(res, 200, "Login successful", { user: data.user });
     } catch (error) {
@@ -125,20 +134,24 @@ class AuthController {
       const { email, password, totpToken } = req.body;
       const data = await AuthService.loginWithTOTP(email, password, totpToken);
 
-      res.cookie("access_token", data.session.access_token, {
+      const cookieOptions = {
         httpOnly: true,
         secure: NODE_ENV === "production",
         sameSite: NODE_ENV === "production" ? "none" : "lax",
+      };
+      
+      if (COOKIE_DOMAIN) {
+        cookieOptions.domain = COOKIE_DOMAIN;
+      }
+
+      res.cookie("access_token", data.session.access_token, {
+        ...cookieOptions,
         maxAge: data.session.expires_in * 1000,
-        domain: COOKIE_DOMAIN,
       });
 
       res.cookie("refresh_token", data.session.refresh_token, {
-        httpOnly: true,
-        secure: NODE_ENV === "production",
-        sameSite: NODE_ENV === "production" ? "none" : "lax",
+        ...cookieOptions,
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        domain: COOKIE_DOMAIN,
       });
 
       return sendResponse(res, 200, "Login successful", { user: data.user });
@@ -230,10 +243,12 @@ class AuthController {
         });
       }
 
-      res.clearCookie("access_token", { domain: COOKIE_DOMAIN });
-      res.clearCookie("refresh_token", { domain: COOKIE_DOMAIN });
-      res.clearCookie("verification_email", { domain: COOKIE_DOMAIN });
-      res.clearCookie("sessionId", { domain: COOKIE_DOMAIN });
+      const clearCookieOptions = COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {};
+
+      res.clearCookie("access_token", clearCookieOptions);
+      res.clearCookie("refresh_token", clearCookieOptions);
+      res.clearCookie("verification_email", clearCookieOptions);
+      res.clearCookie("sessionId", clearCookieOptions);
 
       return sendResponse(res, 200, "Logged out successfully");
     } catch (error) {
@@ -264,23 +279,26 @@ class AuthController {
 
       const session = await AuthService.refreshSession(refreshToken);
 
-      res.cookie("access_token", session.access_token, {
+      const cookieOptions = {
         httpOnly: true,
         secure: NODE_ENV === "production",
         sameSite: NODE_ENV === "production" ? "none" : "lax",
-        maxAge: session.expires_in * 1000,
-        domain: COOKIE_DOMAIN,
         path: "/",
+      };
+      
+      if (COOKIE_DOMAIN) {
+        cookieOptions.domain = COOKIE_DOMAIN;
+      }
+
+      res.cookie("access_token", session.access_token, {
+        ...cookieOptions,
+        maxAge: session.expires_in * 1000,
       });
 
       if (session.refresh_token) {
         res.cookie("refresh_token", session.refresh_token, {
-          httpOnly: true,
-          secure: NODE_ENV === "production",
-          sameSite: NODE_ENV === "production" ? "none" : "lax",
+          ...cookieOptions,
           maxAge: 30 * 24 * 60 * 60 * 1000,
-          domain: COOKIE_DOMAIN,
-          path: "/",
         });
       }
 
@@ -292,9 +310,11 @@ class AuthController {
         expires_at: session.expires_at,
       });
     } catch (error) {
-      res.clearCookie("access_token", { domain: COOKIE_DOMAIN });
-      res.clearCookie("refresh_token", { domain: COOKIE_DOMAIN });
-      res.clearCookie("verification_email", { domain: COOKIE_DOMAIN });
+      const clearCookieOptions = COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {};
+      
+      res.clearCookie("access_token", clearCookieOptions);
+      res.clearCookie("refresh_token", clearCookieOptions);
+      res.clearCookie("verification_email", clearCookieOptions);
 
       return sendError(res, 401, "Refresh failed: " + error.message);
     }

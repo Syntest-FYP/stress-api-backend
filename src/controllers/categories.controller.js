@@ -15,34 +15,26 @@ const getCategories = async (req, res) => {
     // Get analyzed schema for this suite
     const analysis = await getSpecAnalysisBySuite(suiteId);
     
-    if (!analysis) {
-      return res.status(404).json({
-        success: false,
-        message: "No analyzed schema found for this suite. Please analyze a schema first.",
-      });
-    }
-
-    // Extract categories from the analysis
-    const categories = analysis.analysis?.insights?.categories || [];
+    // Extract categories from the analysis (default to empty array if no analysis)
+    const categories = analysis?.analysis?.insights?.categories || [];
     
-    if (!categories || categories.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No categories found in the analyzed schema.",
-      });
-    }
-
+    // Always return 200 with categories (empty array if none found)
+    // This prevents frontend errors when no schema has been analyzed yet
     return res.status(200).json({
       success: true,
       data: {
         categories: categories,
         total_categories: categories.length,
         suite_id: suiteId,
-        analysis_date: analysis.created_at
+        analysis_date: analysis?.created_at || null,
+        has_analysis: !!analysis
       },
       metadata: {
         suite_id: suiteId,
-        categories_available: categories.length
+        categories_available: categories.length,
+        message: categories.length === 0 
+          ? "No categories found. Please analyze a schema first to generate categories."
+          : "Categories retrieved successfully"
       }
     });
   } catch (error) {
