@@ -6,7 +6,8 @@
   "scripts": {
     "start": "nodemon src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+      "test-jest": "jest"
   },
   "repository": {
     "type": "git",
@@ -51,6 +52,8 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.8",
+    "jest": "^30.2.0",
+    "jest-html-reporter": "^4.3.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.3"
   }

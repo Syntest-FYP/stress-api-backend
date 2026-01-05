@@ -1,21 +1,25 @@
-const EndpointCollection = require('../models/Endpoint');
-const { normalizeQueryParams } = require('../utils/queryParamNormalizer');
+const EndpointCollection = require("../models/Endpoint");
+const { normalizeQueryParams } = require("../utils/queryParamNormalizer");
 
 class EndpointService {
   // Create or update endpoint collection
   static async createOrUpdateEndpointCollection(user_id, suite_id, endpoints) {
     if (!endpoints || endpoints.length === 0) return null;
-    
-    const endpointDocs = endpoints.map(endpoint => ({
+
+    const endpointDocs = endpoints.map((endpoint) => ({
       name: endpoint.name || endpoint.description || null,
       method: endpoint.method,
       path: endpoint.path,
       base_url: endpoint.base_url || null,
       headers: endpoint.headers || {},
-      query_params: normalizeQueryParams(endpoint.query_params || endpoint.parameters || {}),
+      query_params: normalizeQueryParams(
+        endpoint.query_params || endpoint.parameters || {}
+      ),
       auth_type: endpoint.auth_type || null,
       tags: endpoint.tags || [],
-      is_active: true
+      request_body: endpoint.request_body || endpoint.requestBody || null,
+      responses: endpoint.responses || null,
+      is_active: true,
     }));
 
     const result = await EndpointCollection.findOneAndUpdate(
@@ -26,13 +30,13 @@ class EndpointService {
           suite_id,
           endpoints: endpointDocs,
           total_endpoints: endpointDocs.length,
-          last_updated: new Date()
-        }
+          last_updated: new Date(),
+        },
       },
-      { 
-        upsert: true, 
-        new: true, 
-        runValidators: true 
+      {
+        upsert: true,
+        new: true,
+        runValidators: true,
       }
     );
 
@@ -47,10 +51,15 @@ class EndpointService {
       path: endpointData.path,
       base_url: endpointData.base_url || null,
       headers: endpointData.headers || {},
-      query_params: normalizeQueryParams(endpointData.query_params || endpointData.parameters || {}),
+      query_params: normalizeQueryParams(
+        endpointData.query_params || endpointData.parameters || {}
+      ),
       auth_type: endpointData.auth_type || null,
       tags: endpointData.tags || [],
-      is_active: true
+      request_body:
+        endpointData.request_body || endpointData.requestBody || null,
+      responses: endpointData.responses || null,
+      is_active: true,
     };
 
     const result = await EndpointCollection.findOneAndUpdate(
@@ -58,12 +67,12 @@ class EndpointService {
       {
         $push: { endpoints: endpointDoc },
         $inc: { total_endpoints: 1 },
-        $set: { last_updated: new Date() }
+        $set: { last_updated: new Date() },
       },
-      { 
-        upsert: true, 
-        new: true, 
-        runValidators: true 
+      {
+        upsert: true,
+        new: true,
+        runValidators: true,
       }
     );
 
@@ -87,23 +96,30 @@ class EndpointService {
   }
 
   // Update specific endpoint in collection
-  static async updateEndpointInCollection(user_id, suite_id, endpoint_id, updateData) {
+  static async updateEndpointInCollection(
+    user_id,
+    suite_id,
+    endpoint_id,
+    updateData
+  ) {
     const sanitizedUpdate = { ...updateData };
-    if (Object.prototype.hasOwnProperty.call(sanitizedUpdate, 'query_params')) {
-      sanitizedUpdate.query_params = normalizeQueryParams(sanitizedUpdate.query_params);
+    if (Object.prototype.hasOwnProperty.call(sanitizedUpdate, "query_params")) {
+      sanitizedUpdate.query_params = normalizeQueryParams(
+        sanitizedUpdate.query_params
+      );
     }
 
     const result = await EndpointCollection.findOneAndUpdate(
-      { 
-        user_id, 
-        suite_id, 
-        'endpoints._id': endpoint_id 
+      {
+        user_id,
+        suite_id,
+        "endpoints._id": endpoint_id,
       },
       {
         $set: {
-          'endpoints.$': { ...sanitizedUpdate, _id: endpoint_id },
-          last_updated: new Date()
-        }
+          "endpoints.$": { ...sanitizedUpdate, _id: endpoint_id },
+          last_updated: new Date(),
+        },
       },
       { new: true, runValidators: true }
     );
@@ -118,7 +134,7 @@ class EndpointService {
       {
         $pull: { endpoints: { _id: endpoint_id } },
         $inc: { total_endpoints: -1 },
-        $set: { last_updated: new Date() }
+        $set: { last_updated: new Date() },
       },
       { new: true }
     );
@@ -135,12 +151,14 @@ class EndpointService {
   static async getEndpointById(endpoint_id, user_id) {
     const collection = await EndpointCollection.findOne({
       user_id,
-      'endpoints._id': endpoint_id
+      "endpoints._id": endpoint_id,
     });
 
     if (!collection) return null;
 
-    const endpoint = collection.endpoints.find(ep => ep._id.toString() === endpoint_id);
+    const endpoint = collection.endpoints.find(
+      (ep) => ep._id.toString() === endpoint_id
+    );
     return endpoint;
   }
 }

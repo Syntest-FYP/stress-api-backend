@@ -1,0 +1,1507 @@
+{
+	"info": {
+		"_postman_id": "61827bf4-ac64-496c-99b3-873b0776975a",
+		"name": "Backlogger API",
+		"description": "Complete API collection for Backlogger backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39145685"
+	},
+	"item": [
+		{
+			"name": "Health Checks",
+			"item": [
+				{
+					"name": "Server Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "IGDB Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health/igdb",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health",
+								"igdb"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"token\", jsonData.data.token);",
+									"    console.log(\"Token saved to environment\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"heuheu\",\n  \"email\": \"i220812@nu.edu.pk\",\n  \"password\": \"sllgV20!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Register",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"heuheu\",\n  \"email\": \"i220812@nu.edu.pk\",\n  \"password\": \"sllgV20!\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/auth/register",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"register"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "310"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"136-fj6KPvvG0yzDl3f/ySi7p2jQ7bI\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 15:59:58 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInVzZXJuYW1lIjoiaGV1aGV1IiwiaWF0IjoxNzY0NTE4Mzk4LCJleHAiOjE3NjUxMjMxOTh9.SUAoFzG4tn6Vfg140A6yy09UdoEvJpBYoTvrIfM_upo\",\n        \"user\": {\n            \"id\": 3,\n            \"username\": \"heuheu\",\n            \"email\": \"i220812@nu.edu.pk\"\n        }\n    },\n    \"message\": \"User registered successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"token\", jsonData.data.token);",
+									"    console.log(\"Token saved to environment\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"naeemmaria60@gmail.com\",\n  \"password\": \"sllgV20!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Login",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"naeemmaria60@gmail.com\",\n  \"password\": \"sllgV20!\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/auth/login",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "310"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"136-fpFcH7GWLrQAUyILZ44Z0+L6jZ8\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:00:15 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInVzZXJuYW1lIjoibWFyaWl5YWFoIiwiaWF0IjoxNzY0NTE4NDE1LCJleHAiOjE3NjUxMjMyMTV9.InYW_nN5DsabKwZJLRfdCRNYoFvYIk8oxWOiU6z9jI8\",\n        \"user\": {\n            \"id\": 1,\n            \"username\": \"mariiyaah\",\n            \"email\": \"naeemmaria60@gmail.com\"\n        }\n    },\n    \"message\": \"Login successful\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Games",
+			"item": [
+				{
+					"name": "Search Games",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/games/search?q=mario&limit=10&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"games",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "mario"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Search Games",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/games/search?q=mario&limit=10&offset=0",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"games",
+										"search"
+									],
+									"query": [
+										{
+											"key": "q",
+											"value": "mario"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "offset",
+											"value": "0"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "6428"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"191c-OckxewZyBYerH4bt3IW9Swr5iwU\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:00:20 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"games\": [\n            {\n                \"id\": 338616,\n                \"cover\": {\n                    \"id\": 449204,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co9mlw.jpg\"\n                },\n                \"first_release_date\": 1582675200,\n                \"genres\": [\n                    {\n                        \"id\": 10,\n                        \"name\": \"Racing\"\n                    }\n                ],\n                \"name\": \"Mario Kart Tour: Mario Bros. Tour\",\n                \"platforms\": [\n                    {\n                        \"id\": 34,\n                        \"name\": \"Android\"\n                    },\n                    {\n                        \"id\": 39,\n                        \"name\": \"iOS\"\n                    }\n                ]\n            },\n            {\n                \"id\": 2707,\n                \"cover\": {\n                    \"id\": 89271,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1wvr.jpg\"\n                },\n                \"first_release_date\": 1255392000,\n                \"genres\": [\n                    {\n                        \"id\": 14,\n                        \"name\": \"Sport\"\n                    }\n                ],\n                \"name\": \"Mario & Sonic at the Olympic Winter Games\",\n                \"platforms\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Wii\"\n                    }\n                ],\n                \"rating\": 68.87515516596031,\n                \"rating_count\": 32,\n                \"summary\": \"Mario & Sonic at the Olympic Winter Games is a sports game with the official license of the 2010 Winter Olympic Games and a crossover franchise from the Mario and the Sonic universe similar to Mario & Sonic at the Olympic Games. It takes place at the Vancouver Winter Olympics of 2010. Like the previous game, the 27 events are presented as motion-based mini-games. Aside from the main events there are a series of Dream Events that have enhanced features and visuals. Some of the events can optionally be played using the balance board peripheral. Events include for instance skiing, snowboarding, bobsleigh, ice hockey, figure skating and more. The games can be played individually or in a festival mode that spans 17 days.\"\n            },\n            {\n                \"id\": 84920,\n                \"cover\": {\n                    \"id\": 134616,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co2vvc.jpg\"\n                },\n                \"first_release_date\": 1287619200,\n                \"genres\": [\n                    {\n                        \"id\": 8,\n                        \"name\": \"Platform\"\n                    },\n                    {\n                        \"id\": 33,\n                        \"name\": \"Arcade\"\n                    }\n                ],\n                \"name\": \"Super Mario All-Stars: Limited Edition\",\n                \"platforms\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Wii\"\n                    }\n                ],\n                \"rating\": 75,\n                \"rating_count\": 3,\n                \"summary\": \"Super Mario All-Stars Limited Edition is a Mario special edition pack for the Wii released as a Wii emulation of the SNES game Super Mario All-Stars. The game is a tribute to the 25th anniversary of Super Mario Bros. and includes an extra package, with a Super Mario History 1985-2010 booklet, that tells about Mario's history and the people who made a big effort making the Mario games, and a CD with many songs across the main series. The game itself is a unaltered emulation of Super Mario All-Stars for the Super Nintendo Entertainment System, down to showing the SNES controller in the configuration screen rather than any of the standard Wii controllers.\"\n            },\n            {\n                \"id\": 132109,\n                \"cover\": {\n                    \"id\": 97072,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co22wg.jpg\"\n                },\n                \"first_release_date\": 1255392000,\n                \"genres\": [\n                    {\n                        \"id\": 14,\n                        \"name\": \"Sport\"\n                    }\n                ],\n                \"name\": \"Mario & Sonic at the Olympic Winter Games\",\n                \"platforms\": [\n                    {\n                        \"id\": 20,\n                        \"name\": \"Nintendo DS\"\n                    }\n                ],\n                \"rating\": 79.81660336080003,\n                \"rating_count\": 9,\n                \"summary\": \"The DS-exclusive adventure mode features a story in which Dr. Eggman and Bowser melt away all the ice needed for the Olympic Games. To set things right Mario & Sonic need to travel to different locations, talk to the inhabitants and solve challenges. Those consist of the sports mini games with certain winning requirements. Playing this mode also unlocks the dream events. Besides this players can decide to enter the party game mode or to play the games separately respectively in a custom tournament. All modes except the adventure mode are also available for up to four players.\"\n            },\n            {\n                \"id\": 116795,\n                \"cover\": {\n                    \"id\": 97077,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co22wl.jpg\"\n                },\n                \"first_release_date\": 1572566400,\n                \"genres\": [\n                    {\n                        \"id\": 14,\n                        \"name\": \"Sport\"\n                    }\n                ],\n                \"name\": \"Mario & Sonic at the Olympic Games Tokyo 2020\",\n                \"platforms\": [\n                    {\n                        \"id\": 130,\n                        \"name\": \"Nintendo Switch\"\n                    }\n                ],\n                \"rating\": 72.02207351506632,\n                \"rating_count\": 16,\n                \"summary\": \"Mario & Sonic at the Olympic Games Tokyo 2020 is the sixth installment in the Mario & Sonic series based on the real-world 2020 Summer Olympics, which will take place in Tokyo, Japan. The game includes a number of events, including returning ones from previous Mario & Sonic titles, such as boxing, soccer, swimming, and gymnastics, and new ones, such as karate, skateboarding, sport climbing, and surfing. It will also feature a mode with 2D Events where players can compete in classic 2D versions of events from the 1964 Summer Olympics. Based off older sports games, these events are played using button controls only and will only feature eight playable characters. These 2D Events' animations reflect the 8-bit Mario and 16-bit Sonic game art style.\"\n            },\n            {\n                \"id\": 241003,\n                \"first_release_date\": 1072828800,\n                \"genres\": [\n                    {\n                        \"id\": 8,\n                        \"name\": \"Platform\"\n                    }\n                ],\n                \"name\": \"Super Mario Advance 4: Super Mario Bros. 3-e - Para Beetle Challenge\",\n                \"platforms\": [\n                    {\n                        \"id\": 510,\n                        \"name\": \"e-Reader / Card-e Reader\"\n                    }\n                ],\n                \"summary\": \"Para Beetle Challenge is an e-Reader level for Super Mario Advance 4: Super Mario Bros. 3. The level contains five Advance Coins. Its official difficulty rating is of 5 out 5 stars. This card was released as part of Series 1 in Japan and Series 2 in North America.\"\n            },\n            {\n                \"id\": 338478,\n                \"cover\": {\n                    \"id\": 449105,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co9mj5.jpg\"\n                },\n                \"first_release_date\": 1576627200,\n                \"genres\": [\n                    {\n                        \"id\": 10,\n                        \"name\": \"Racing\"\n                    }\n                ],\n                \"name\": \"Mario Kart Tour: Holiday Tour\",\n                \"platforms\": [\n                    {\n                        \"id\": 34,\n                        \"name\": \"Android\"\n                    },\n                    {\n                        \"id\": 39,\n                        \"name\": \"iOS\"\n                    }\n                ]\n            },\n            {\n                \"id\": 338620,\n                \"cover\": {\n                    \"id\": 481375,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/coabfj.jpg\"\n                },\n                \"first_release_date\": 1585094400,\n                \"genres\": [\n                    {\n                        \"id\": 10,\n                        \"name\": \"Racing\"\n                    }\n                ],\n                \"name\": \"Mario Kart Tour: Hammer Bro Tour\",\n                \"platforms\": [\n                    {\n                        \"id\": 34,\n                        \"name\": \"Android\"\n                    },\n                    {\n                        \"id\": 39,\n                        \"name\": \"iOS\"\n                    }\n                ]\n            },\n            {\n                \"id\": 338619,\n                \"cover\": {\n                    \"id\": 481229,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/coabbh.jpg\"\n                },\n                \"first_release_date\": 1583798400,\n                \"genres\": [\n                    {\n                        \"id\": 10,\n                        \"name\": \"Racing\"\n                    }\n                ],\n                \"name\": \"Mario Kart Tour: Baby Rosalina Tour\",\n                \"platforms\": [\n                    {\n                        \"id\": 34,\n                        \"name\": \"Android\"\n                    },\n                    {\n                        \"id\": 39,\n                        \"name\": \"iOS\"\n                    }\n                ]\n            },\n            {\n                \"id\": 172201,\n                \"cover\": {\n                    \"id\": 190133,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co42ph.jpg\"\n                },\n                \"first_release_date\": 431913600,\n                \"genres\": [\n                    {\n                        \"id\": 8,\n                        \"name\": \"Platform\"\n                    },\n                    {\n                        \"id\": 33,\n                        \"name\": \"Arcade\"\n                    }\n                ],\n                \"name\": \"Mario Bros.\",\n                \"platforms\": [\n                    {\n                        \"id\": 52,\n                        \"name\": \"Arcade\"\n                    },\n                    {\n                        \"id\": 37,\n                        \"name\": \"Nintendo 3DS\"\n                    },\n                    {\n                        \"id\": 5,\n                        \"name\": \"Wii\"\n                    },\n                    {\n                        \"id\": 99,\n                        \"name\": \"Family Computer\"\n                    },\n                    {\n                        \"id\": 41,\n                        \"name\": \"Wii U\"\n                    },\n                    {\n                        \"id\": 18,\n                        \"name\": \"Nintendo Entertainment System\"\n                    }\n                ],\n                \"rating\": 54.49537497620678,\n                \"rating_count\": 38,\n                \"summary\": \"The first port of Mario Bros. was developed by Nintendo for the Famicom and later released in American under the Arcade Classics series. It follows most of the features of the arcade game, and adds a difficulty setting.\\nThis version would be the most re-released version in future consoles.\"\n            }\n        ],\n        \"count\": 10,\n        \"limit\": 10,\n        \"offset\": 0\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Game by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/games/1942",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"games",
+								"1942"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Game by ID",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/games/1942",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"games",
+										"1942"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "3879"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"f27-mtrsgjT5qfMe4TpAxub396Xjrps\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:00:47 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"game\": {\n            \"id\": 1942,\n            \"cover\": {\n                \"id\": 480513,\n                \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/coaarl.jpg\"\n            },\n            \"first_release_date\": 1431993600,\n            \"genres\": [\n                {\n                    \"id\": 12,\n                    \"name\": \"Role-playing (RPG)\"\n                },\n                {\n                    \"id\": 31,\n                    \"name\": \"Adventure\"\n                }\n            ],\n            \"involved_companies\": [\n                {\n                    \"id\": 17436,\n                    \"company\": {\n                        \"id\": 50,\n                        \"name\": \"WB Games\"\n                    },\n                    \"developer\": false,\n                    \"publisher\": true\n                },\n                {\n                    \"id\": 17769,\n                    \"company\": {\n                        \"id\": 3119,\n                        \"name\": \"cdp.pl\"\n                    },\n                    \"developer\": false,\n                    \"publisher\": true\n                },\n                {\n                    \"id\": 17771,\n                    \"company\": {\n                        \"id\": 1217,\n                        \"name\": \"Spike Chunsoft\"\n                    },\n                    \"developer\": false,\n                    \"publisher\": true\n                },\n                {\n                    \"id\": 17768,\n                    \"company\": {\n                        \"id\": 248,\n                        \"name\": \"Bandai Namco Entertainment\"\n                    },\n                    \"developer\": false,\n                    \"publisher\": true\n                },\n                {\n                    \"id\": 42142,\n                    \"company\": {\n                        \"id\": 908,\n                        \"name\": \"CD Projekt RED\"\n                    },\n                    \"developer\": true,\n                    \"publisher\": false\n                },\n                {\n                    \"id\": 64293,\n                    \"company\": {\n                        \"id\": 5696,\n                        \"name\": \"D3T Limited\"\n                    },\n                    \"developer\": false,\n                    \"publisher\": false\n                },\n                {\n                    \"id\": 196544,\n                    \"company\": {\n                        \"id\": 946,\n                        \"name\": \"Saber Interactive\"\n                    },\n                    \"developer\": false,\n                    \"publisher\": false\n                }\n            ],\n            \"name\": \"The Witcher 3: Wild Hunt\",\n            \"platforms\": [\n                {\n                    \"id\": 169,\n                    \"name\": \"Xbox Series X|S\"\n                },\n                {\n                    \"id\": 48,\n                    \"name\": \"PlayStation 4\"\n                },\n                {\n                    \"id\": 6,\n                    \"name\": \"PC (Microsoft Windows)\"\n                },\n                {\n                    \"id\": 167,\n                    \"name\": \"PlayStation 5\"\n                },\n                {\n                    \"id\": 49,\n                    \"name\": \"Xbox One\"\n                },\n                {\n                    \"id\": 130,\n                    \"name\": \"Nintendo Switch\"\n                }\n            ],\n            \"rating\": 93.99901768476887,\n            \"rating_count\": 4873,\n            \"screenshots\": [\n                {\n                    \"id\": 21107,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/farvemmmxav0bgt6wx7t.jpg\"\n                },\n                {\n                    \"id\": 9745,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/z5t0yuhyiiui1ickwhgj.jpg\"\n                },\n                {\n                    \"id\": 9743,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/em1y2ugcwy2myuhvb9db.jpg\"\n                },\n                {\n                    \"id\": 9744,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/usxccsncekxg0wd1v6ee.jpg\"\n                },\n                {\n                    \"id\": 9742,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/mnljdjtrh44x4snmierh.jpg\"\n                },\n                {\n                    \"id\": 853177,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/sciabd.jpg\"\n                },\n                {\n                    \"id\": 853178,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/sciabe.jpg\"\n                },\n                {\n                    \"id\": 853179,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/sciabf.jpg\"\n                },\n                {\n                    \"id\": 853180,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/sciabg.jpg\"\n                },\n                {\n                    \"id\": 853181,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/sciabh.jpg\"\n                },\n                {\n                    \"id\": 1377965,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/sctj8t.jpg\"\n                },\n                {\n                    \"id\": 1377966,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/sctj8u.jpg\"\n                }\n            ],\n            \"storyline\": \"The Witcher 3: Wild Hunt concludes the story of the witcher Geralt of Rivia, the series' protagonist, whose story to date has been covered in the previous installments. Geralt's new mission comes in dark times as the mysterious and otherworldly army known as the Wild Hunt invades the Northern Kingdoms, leaving only blood soaked earth and fiery ruin in its wake; and it seems the Witcher is the key to stopping their cataclysmic rampage.\",\n            \"summary\": \"The Witcher 3: Wild Hunt is an open-world action role-playing game developed by CD Projekt Red.\\n\\nSet in a dark fantasy world, the game follows Geralt of Rivia, a monster hunter searching for his adopted daughter, Ciri, while navigating political conflicts and supernatural threats. Gameplay features exploration, combat, character progression, and branching narratives shaped by player choices. Widely acclaimed for its writing, world-building, and depth, it is considered one of the most influential RPGs of its generation.\",\n            \"videos\": [\n                {\n                    \"id\": 9648,\n                    \"video_id\": \"yowv6_rspoM\"\n                },\n                {\n                    \"id\": 5993,\n                    \"video_id\": \"xQGam9OHSUo\"\n                },\n                {\n                    \"id\": 5990,\n                    \"video_id\": \"QrwGXAcE6ZA\"\n                },\n                {\n                    \"id\": 5992,\n                    \"video_id\": \"bcEAsOC_8L0\"\n                },\n                {\n                    \"id\": 5987,\n                    \"video_id\": \"5nLipy-Z4yo\"\n                },\n                {\n                    \"id\": 5995,\n                    \"video_id\": \"8ZLfJjlZKvc\"\n                },\n                {\n                    \"id\": 5994,\n                    \"video_id\": \"p14dHAwLOmo\"\n                },\n                {\n                    \"id\": 5991,\n                    \"video_id\": \"6f8TbvsZ5Mk\"\n                },\n                {\n                    \"id\": 5989,\n                    \"video_id\": \"_IBAovRNCuA\"\n                },\n                {\n                    \"id\": 5988,\n                    \"video_id\": \"FP7no968jVU\"\n                },\n                {\n                    \"id\": 5996,\n                    \"video_id\": \"sb81f-ejNSI\"\n                },\n                {\n                    \"id\": 150458,\n                    \"video_id\": \"TWOkT7l0yWQ\"\n                },\n                {\n                    \"id\": 15748,\n                    \"video_id\": \"ZpiczsigQto\"\n                },\n                {\n                    \"id\": 120257,\n                    \"video_id\": \"gRmKKjQu9Tw\"\n                },\n                {\n                    \"id\": 141704,\n                    \"video_id\": \"MqQ3LeBgGDM\"\n                },\n                {\n                    \"id\": 141210,\n                    \"video_id\": \"c0i88t0Kacs\"\n                },\n                {\n                    \"id\": 141211,\n                    \"video_id\": \"1-l29HlKkXU\"\n                }\n            ]\n        },\n        \"cached\": true\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Popular Games",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/games/popular/list?limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"games",
+								"popular",
+								"list"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Popular Games",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/games/popular/list?limit=20",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"games",
+										"popular",
+										"list"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "20"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "20159"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"4ebf-4QptPpk4KljTyVNRNz9QBIdEZJQ\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:00:55 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"games\": [\n            {\n                \"id\": 1020,\n                \"cover\": {\n                    \"id\": 120937,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co2lbd.jpg\"\n                },\n                \"first_release_date\": 1379376000,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 10,\n                        \"name\": \"Racing\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Grand Theft Auto V\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 48,\n                        \"name\": \"PlayStation 4\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    },\n                    {\n                        \"id\": 49,\n                        \"name\": \"Xbox One\"\n                    }\n                ],\n                \"rating\": 89.53336352684518,\n                \"rating_count\": 5336,\n                \"summary\": \"Grand Theft Auto V is a vast open world game set in Los Santos, a sprawling sun-soaked metropolis struggling to stay afloat in an era of economic uncertainty and cheap reality TV. The game blends storytelling and gameplay in new ways as players repeatedly jump in and out of the lives of the game’s three lead characters, playing all sides of the game’s interwoven story.\"\n            },\n            {\n                \"id\": 1942,\n                \"cover\": {\n                    \"id\": 480513,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/coaarl.jpg\"\n                },\n                \"first_release_date\": 1431993600,\n                \"genres\": [\n                    {\n                        \"id\": 12,\n                        \"name\": \"Role-playing (RPG)\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"The Witcher 3: Wild Hunt\",\n                \"platforms\": [\n                    {\n                        \"id\": 169,\n                        \"name\": \"Xbox Series X|S\"\n                    },\n                    {\n                        \"id\": 48,\n                        \"name\": \"PlayStation 4\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 167,\n                        \"name\": \"PlayStation 5\"\n                    },\n                    {\n                        \"id\": 49,\n                        \"name\": \"Xbox One\"\n                    },\n                    {\n                        \"id\": 130,\n                        \"name\": \"Nintendo Switch\"\n                    }\n                ],\n                \"rating\": 93.99901768476887,\n                \"rating_count\": 4873,\n                \"summary\": \"The Witcher 3: Wild Hunt is an open-world action role-playing game developed by CD Projekt Red.\\n\\nSet in a dark fantasy world, the game follows Geralt of Rivia, a monster hunter searching for his adopted daughter, Ciri, while navigating political conflicts and supernatural threats. Gameplay features exploration, combat, character progression, and branching narratives shaped by player choices. Widely acclaimed for its writing, world-building, and depth, it is considered one of the most influential RPGs of its generation.\"\n            },\n            {\n                \"id\": 72,\n                \"cover\": {\n                    \"id\": 82660,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1rs4.jpg\"\n                },\n                \"first_release_date\": 1303084800,\n                \"genres\": [\n                    {\n                        \"id\": 8,\n                        \"name\": \"Platform\"\n                    },\n                    {\n                        \"id\": 9,\n                        \"name\": \"Puzzle\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Portal 2\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 3,\n                        \"name\": \"Linux\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    },\n                    {\n                        \"id\": 130,\n                        \"name\": \"Nintendo Switch\"\n                    }\n                ],\n                \"rating\": 91.52167139689696,\n                \"rating_count\": 4074,\n                \"summary\": \"Sequel to the acclaimed Portal (2007), Portal 2 pits the protagonist of the original game, Chell, and her new robot friend, Wheatley, against more puzzles conceived by GLaDOS, an A.I. with the sole purpose of testing the Portal Gun's mechanics and taking revenge on Chell for the events of Portal. As a result of several interactions and revelations, Chell once again pushes to escape Aperture Science Labs.\"\n            },\n            {\n                \"id\": 472,\n                \"cover\": {\n                    \"id\": 85100,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1tnw.jpg\"\n                },\n                \"first_release_date\": 1320883200,\n                \"genres\": [\n                    {\n                        \"id\": 12,\n                        \"name\": \"Role-playing (RPG)\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"The Elder Scrolls V: Skyrim\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    }\n                ],\n                \"rating\": 87.49352631998399,\n                \"rating_count\": 3958,\n                \"summary\": \"Skyrim reimagines and revolutionizes the open-world fantasy epic, bringing to life a complete virtual world open for you to explore any way you choose. Play any type of character you can imagine, and do whatever you want; the legendary freedom of choice, storytelling, and adventure of The Elder Scrolls is realized like never before.\"\n            },\n            {\n                \"id\": 71,\n                \"cover\": {\n                    \"id\": 89689,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1x7d.jpg\"\n                },\n                \"first_release_date\": 1191974400,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 8,\n                        \"name\": \"Platform\"\n                    },\n                    {\n                        \"id\": 9,\n                        \"name\": \"Puzzle\"\n                    }\n                ],\n                \"name\": \"Portal\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 3,\n                        \"name\": \"Linux\"\n                    },\n                    {\n                        \"id\": 34,\n                        \"name\": \"Android\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    },\n                    {\n                        \"id\": 130,\n                        \"name\": \"Nintendo Switch\"\n                    }\n                ],\n                \"rating\": 86.44610857518346,\n                \"rating_count\": 3680,\n                \"summary\": \"Waking up in a seemingly empty laboratory, the player is made to complete various physics-based puzzle challenges through numerous test chambers in order to test out the new Aperture Science Handheld Portal Device, without an explanation as to how, why or by whom.\"\n            },\n            {\n                \"id\": 732,\n                \"cover\": {\n                    \"id\": 120933,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co2lb9.jpg\"\n                },\n                \"first_release_date\": 1098748800,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 10,\n                        \"name\": \"Racing\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Grand Theft Auto: San Andreas\",\n                \"platforms\": [\n                    {\n                        \"id\": 11,\n                        \"name\": \"Xbox\"\n                    },\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 48,\n                        \"name\": \"PlayStation 4\"\n                    },\n                    {\n                        \"id\": 34,\n                        \"name\": \"Android\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 39,\n                        \"name\": \"iOS\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    },\n                    {\n                        \"id\": 8,\n                        \"name\": \"PlayStation 2\"\n                    }\n                ],\n                \"rating\": 90.22246302595205,\n                \"rating_count\": 3612,\n                \"summary\": \"Returning after his mother's murder to the semi-fictional city of Los Santos (based on Los Angeles), Carl Johnson, a former gang banger, must take back the streets for his family and friends by gaining respect and once again gaining control over the streets. However, a story filled with crime, lies and corruption will lead him to trudge the entire state of San Andreas (based on California and Nevada) to rebuild his life.\"\n            },\n            {\n                \"id\": 25076,\n                \"cover\": {\n                    \"id\": 80403,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1q1f.jpg\"\n                },\n                \"first_release_date\": 1540512000,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Role-playing (RPG)\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Red Dead Redemption 2\",\n                \"platforms\": [\n                    {\n                        \"id\": 170,\n                        \"name\": \"Google Stadia\"\n                    },\n                    {\n                        \"id\": 48,\n                        \"name\": \"PlayStation 4\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 49,\n                        \"name\": \"Xbox One\"\n                    }\n                ],\n                \"rating\": 93.26576713242787,\n                \"rating_count\": 3154,\n                \"summary\": \"Red Dead Redemption 2 is the epic tale of outlaw Arthur Morgan and the infamous Van der Linde gang, on the run across America at the dawn of the modern age.\"\n            },\n            {\n                \"id\": 1009,\n                \"cover\": {\n                    \"id\": 81915,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1r7f.jpg\"\n                },\n                \"first_release_date\": 1371168000,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"The Last of Us\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    }\n                ],\n                \"rating\": 93.11831284789805,\n                \"rating_count\": 3136,\n                \"summary\": \"The Last of Us is a third-person action-adventure game featuring a mix of exploration, stealth and combat. Players face both infected creatures and hostile human enemies while progressing through varied environments. The game includes a narrative-driven single-player campaign and a competitive online multiplayer mode called Factions. Trophy support is included, and additional downloadable content was made available separately.\"\n            },\n            {\n                \"id\": 233,\n                \"cover\": {\n                    \"id\": 77288,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1nmw.jpg\"\n                },\n                \"first_release_date\": 1100563200,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    }\n                ],\n                \"name\": \"Half-Life 2\",\n                \"platforms\": [\n                    {\n                        \"id\": 11,\n                        \"name\": \"Xbox\"\n                    },\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 3,\n                        \"name\": \"Linux\"\n                    },\n                    {\n                        \"id\": 34,\n                        \"name\": \"Android\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    }\n                ],\n                \"rating\": 90.33566545985246,\n                \"rating_count\": 3108,\n                \"summary\": \"1998. HALF-LIFE sends a shock through the game industry with its combination of pounding action and continuous, immersive storytelling.\\n\\nNOW. By taking the suspense, challenge and visceral charge of the original, and adding startling new realism and responsiveness, Half-Life 2 opens the door to a world where the player's presence affects everything around them, from the physical environment to the behaviors even the emotions of both friends and enemies.\"\n            },\n            {\n                \"id\": 19560,\n                \"cover\": {\n                    \"id\": 85062,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1tmu.jpg\"\n                },\n                \"first_release_date\": 1524182400,\n                \"genres\": [\n                    {\n                        \"id\": 12,\n                        \"name\": \"Role-playing (RPG)\"\n                    },\n                    {\n                        \"id\": 25,\n                        \"name\": \"Hack and slash/Beat 'em up\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"God of War\",\n                \"platforms\": [\n                    {\n                        \"id\": 48,\n                        \"name\": \"PlayStation 4\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    }\n                ],\n                \"rating\": 92.2266311407612,\n                \"rating_count\": 3082,\n                \"summary\": \"God of War is the sequel to God of War III as well as a continuation of the canon God of War chronology. Unlike previous installments, this game focuses on Norse mythology and follows an older and more seasoned Kratos and his son Atreus in the years since the third game. It is in this harsh, unforgiving world that he must fight to survive… and teach his son to do the same.\"\n            },\n            {\n                \"id\": 127,\n                \"cover\": {\n                    \"id\": 82095,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1rcf.jpg\"\n                },\n                \"first_release_date\": 1258416000,\n                \"genres\": [\n                    {\n                        \"id\": 8,\n                        \"name\": \"Platform\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Assassin's Creed II\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 39,\n                        \"name\": \"iOS\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    }\n                ],\n                \"rating\": 86.63253359389033,\n                \"rating_count\": 2951,\n                \"summary\": \"Discover an intriguing and epic story of power, revenge and conspiracy set during a pivotal moment in history: the Italian Renaissance.\\nExperience the freedom and immersion of an all new open world and mission structure with settings such as the rooftops and canals of beautiful Venice. Your options in combat, assassination and escape are vast, with many new weapons, settings and gameplay elements.\"\n            },\n            {\n                \"id\": 20,\n                \"cover\": {\n                    \"id\": 122598,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co2mli.jpg\"\n                },\n                \"first_release_date\": 1187654400,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 9,\n                        \"name\": \"Puzzle\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Role-playing (RPG)\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"BioShock\",\n                \"platforms\": [\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    }\n                ],\n                \"rating\": 86.6899410894473,\n                \"rating_count\": 2943,\n                \"summary\": \"BioShock is a horror-themed first-person shooter set in a steampunk underwater dystopia. The player is urged to turn everything into a weapon: biologically modifying their own body with Plasmids, hacking devices and systems, upgrading their weapons, crafting new ammo variants, and experimenting with different battle techniques are all possible. The game is described by the developers as a spiritual successor to their previous PC title System Shock 2. BioShock received high praise in critical reviews for its atmospheric audio and visual quality, absorbing and original plot and its unique gaming experience.\"\n            },\n            {\n                \"id\": 733,\n                \"cover\": {\n                    \"id\": 120935,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co2lbb.jpg\"\n                },\n                \"first_release_date\": 1035676800,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 10,\n                        \"name\": \"Racing\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    },\n                    {\n                        \"id\": 33,\n                        \"name\": \"Arcade\"\n                    }\n                ],\n                \"name\": \"Grand Theft Auto: Vice City\",\n                \"platforms\": [\n                    {\n                        \"id\": 11,\n                        \"name\": \"Xbox\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 8,\n                        \"name\": \"PlayStation 2\"\n                    }\n                ],\n                \"rating\": 87.38803172166607,\n                \"rating_count\": 2808,\n                \"summary\": \"In the year 1986, Tommy Vercetti is heavily indebted to his mafia superiors after a drug deal gone awry, but his dreams of taking over Vice City (based on Miami) push him down a different path. Featuring a wide variety of vehicles and weapons, radio stations playing hit songs from the era and an intense atmosphere, GTA: Vice City is an open-world sandbox satire of '80's Miami.\"\n            },\n            {\n                \"id\": 7346,\n                \"cover\": {\n                    \"id\": 172453,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co3p2d.jpg\"\n                },\n                \"first_release_date\": 1488499200,\n                \"genres\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"Puzzle\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"The Legend of Zelda: Breath of the Wild\",\n                \"platforms\": [\n                    {\n                        \"id\": 41,\n                        \"name\": \"Wii U\"\n                    },\n                    {\n                        \"id\": 130,\n                        \"name\": \"Nintendo Switch\"\n                    }\n                ],\n                \"rating\": 92.61565284079113,\n                \"rating_count\": 2676,\n                \"summary\": \"The Legend of Zelda: Breath of the Wild is the first 3D open-world game in the Zelda series. Link can travel anywhere and be equipped with weapons and armor found throughout the world to grant him various bonuses. Unlike many games in the series, Breath of the Wild does not impose a specific order in which quests or dungeons must be completed. While the game still has environmental obstacles such as weather effects, inhospitable lands, or powerful enemies, many of them can be overcome using the right method. A lot of critics ranked Breath of the Wild as one of the best video games of all time.\"\n            },\n            {\n                \"id\": 231,\n                \"cover\": {\n                    \"id\": 487607,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/coag8n.jpg\"\n                },\n                \"first_release_date\": 911433600,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 9,\n                        \"name\": \"Puzzle\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Half-Life\",\n                \"platforms\": [\n                    {\n                        \"id\": 3,\n                        \"name\": \"Linux\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 8,\n                        \"name\": \"PlayStation 2\"\n                    }\n                ],\n                \"rating\": 88.39231714853946,\n                \"rating_count\": 2655,\n                \"summary\": \"Dr. Gordon Freeman doesn't speak, but he's got a helluva story to tell. This first-person roller-coaster initiated a new era in the history of action games by combining engrossing gameplay, upgraded graphics, ingenious level design and a revolutionary story that may not be all that it seems, told not through cutscenes, but through the visual environment.\"\n            },\n            {\n                \"id\": 74,\n                \"cover\": {\n                    \"id\": 93684,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co20ac.jpg\"\n                },\n                \"first_release_date\": 1264464000,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Role-playing (RPG)\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Mass Effect 2\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    }\n                ],\n                \"rating\": 91.42048383640487,\n                \"rating_count\": 2584,\n                \"summary\": \"Are you prepared to lose everything to save the galaxy? You'll need to be, Commander Shephard. It's time to bring together your greatest allies and recruit the galaxy's fighting elite to continue the resistance against the invading Reapers. So steel yourself, because this is an astronomical mission where sacrifices must be made. You'll face tougher choices and new, deadlier enemies. Arm yourself and prepare for an unforgettable intergalactic adventure.\\n\\nGame Features:\\n\\nShift the fight in your favour. Equip yourself with powerful new weapons almost instantly thanks to a new inventory system. Plus, an improved health regeneration system means you'll spend less time hunting for restorative items.\\n\\nMake every decision matter. Divisive crew members are just the tip of the iceberg, Commander, because you'll also be tasked with issues of intergalactic diplomacy. And time's a wastin' so don't be afraid to use new prompt-based actions that let you interrupt conversations, even if they could alter the fate of your crew...and the galaxy.\\n\\nForge new alliances, carefully. You'll fight alongside some of your most trustworthy crew members, but you'll also get the opportunity to recruit new talent. Just choose your new partners with care because the fate of the galaxy rests on your shoulders, Commander.\"\n            },\n            {\n                \"id\": 538,\n                \"cover\": {\n                    \"id\": 123158,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co2n12.jpg\"\n                },\n                \"first_release_date\": 1364169600,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"BioShock Infinite\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 3,\n                        \"name\": \"Linux\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    }\n                ],\n                \"rating\": 85.62810916521428,\n                \"rating_count\": 2533,\n                \"summary\": \"BioShock Infinite is the third game in the BioShock series. It is not a direct sequel/prequel to any of the previous BioShock games but takes place in an entirely different setting, although it shares similar features, gameplay and concepts with the previous games. BioShock Infinite features a range of environments that force the player to adapt, with different weapons and strategies for each situation. Interior spaces feature close combat with enemies, but unlike previous games set in Rapture, the setting of Infinite contains open spaces with emphasis on sniping and ranged combat against as many as fifteen enemies at once.\"\n            },\n            {\n                \"id\": 501,\n                \"cover\": {\n                    \"id\": 87713,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1voh.jpg\"\n                },\n                \"first_release_date\": 1318896000,\n                \"genres\": [\n                    {\n                        \"id\": 25,\n                        \"name\": \"Hack and slash/Beat 'em up\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Batman: Arkham City\",\n                \"platforms\": [\n                    {\n                        \"id\": 113,\n                        \"name\": \"OnLive Game System\"\n                    },\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    },\n                    {\n                        \"id\": 130,\n                        \"name\": \"Nintendo Switch\"\n                    }\n                ],\n                \"rating\": 87.52209344442397,\n                \"rating_count\": 2486,\n                \"summary\": \"Batman: Arkham City builds upon the intense, atmospheric foundation of Batman: Arkham Asylum, sending players soaring into Arkham City, the new maximum security \\\"home\\\" for all of Gotham City's thugs, gangsters and insane criminal masterminds.\\n\\nSet inside the heavily fortified walls of a sprawling district in the heart of Gotham City, this highly anticipated sequel introduces a brand-new story that draws together a new all-star cast of classic characters and murderous villains from the Batman universe, as well as a vast range of new and enhanced gameplay features to deliver the ultimate experience as the Dark Knight.\"\n            },\n            {\n                \"id\": 500,\n                \"cover\": {\n                    \"id\": 87715,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1voj.jpg\"\n                },\n                \"first_release_date\": 1251158400,\n                \"genres\": [\n                    {\n                        \"id\": 25,\n                        \"name\": \"Hack and slash/Beat 'em up\"\n                    },\n                    {\n                        \"id\": 31,\n                        \"name\": \"Adventure\"\n                    }\n                ],\n                \"name\": \"Batman: Arkham Asylum\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 72,\n                        \"name\": \"Ouya\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 14,\n                        \"name\": \"Mac\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    },\n                    {\n                        \"id\": 130,\n                        \"name\": \"Nintendo Switch\"\n                    }\n                ],\n                \"rating\": 85.59434405574657,\n                \"rating_count\": 2458,\n                \"summary\": \"Batman: Arkham Asylum is an action-adventure game developed by Rocksteady Studios and published by Warner Bros. Interactive Entertainment. Released in 2009, it follows Batman as he battles the Joker, who seizes control of Arkham Asylum and frees its inmates. The game features stealth, combat, and detective elements, with players using Batman's gadgets and skills to subdue enemies and solve puzzles.\\n\\nSet in a dark, immersive version of Gotham, the story explores Batman’s psychological battle with his foes, including Harley Quinn, Bane, and Scarecrow. The game received critical acclaim for its gameplay, atmosphere, and storytelling, becoming a defining title in superhero video games.\"\n            },\n            {\n                \"id\": 73,\n                \"cover\": {\n                    \"id\": 89700,\n                    \"url\": \"//images.igdb.com/igdb/image/upload/t_thumb/co1x7o.jpg\"\n                },\n                \"first_release_date\": 1195516800,\n                \"genres\": [\n                    {\n                        \"id\": 5,\n                        \"name\": \"Shooter\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Role-playing (RPG)\"\n                    }\n                ],\n                \"name\": \"Mass Effect\",\n                \"platforms\": [\n                    {\n                        \"id\": 9,\n                        \"name\": \"PlayStation 3\"\n                    },\n                    {\n                        \"id\": 6,\n                        \"name\": \"PC (Microsoft Windows)\"\n                    },\n                    {\n                        \"id\": 12,\n                        \"name\": \"Xbox 360\"\n                    }\n                ],\n                \"rating\": 86.11961275468856,\n                \"rating_count\": 2364,\n                \"summary\": \"What starts as a routine mission to an agrarian outpost quickly becomes the opening salvo in an epic war. As the newly appointed Executive Officer of the SSV Normandy, you'll assemble and lead an elite squad of heroes into battle after heart-pounding battle. Each decision you make will impact not only your fate, but the destiny of the entire galaxy in the Mass Effect trilogy.\\n\\nKey Features:\\n\\nIncredible, interactive storytelling. Create and customize your own character, from Commander Shepard's appearance and skills to a personalized arsenal. Unleash devastating abilities as you command and train. Your decisions will control the outcome of each mission, your relationships with your crew and ultimately the entire war.\\n\\nAn amazing universe to explore. From the massive Citadel to the harsh, radioactive landscape of the Krogan home world – the incredible breadth of the Mass Effect universe will blow you away. Travel to the farthest outposts aboard the SSV Normandy, the most technologically advanced ship in the galaxy. You'll follow the clues left by ancient civilizations, discover hidden bases with fantastic new tech and lead your hand-picked crew into explosive alien battles.\\n\\nEdge-of-your-seat excitement meets strategic combat. Find the perfect combination of squad-mates and weapons for each battle if you want to lead them to victory. Sun-Tzu's advice remains as pertinent in 2183 as it is today – know your enemy. You'll need different tactics for a squad of enemies with devastating biotic attacks than a heavily armored Geth Colossus so choose your teams wisely.\"\n            }\n        ],\n        \"count\": 20,\n        \"limit\": 20\n    }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Library",
+			"item": [
+				{
+					"name": "Get Library",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/library?status=backlogged&limit=50&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"library"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "backlogged"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Library",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/library?status=backlogged&limit=50&offset=0",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"library"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "backlogged"
+										},
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "offset",
+											"value": "0"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "322"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"142-YXUO2h6fO85BAHn+g4uuJA2kBcc\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:01:18 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"games\": [\n            {\n                \"id\": 1,\n                \"user_id\": 1,\n                \"igdb_game_id\": 1942,\n                \"status\": \"backlogged\",\n                \"rating\": null,\n                \"hours_played\": \"0.00\",\n                \"notes\": \"Want to play this classic!\",\n                \"start_date\": null,\n                \"completion_date\": null,\n                \"added_at\": \"2025-11-30T16:01:11.000Z\",\n                \"updated_at\": \"2025-11-30T16:01:11.000Z\"\n            }\n        ],\n        \"count\": 1,\n        \"limit\": 50,\n        \"offset\": 0\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Add Game to Library",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"igdb_game_id\": 1942,\n  \"status\": \"backlogged\",\n  \"rating\": null,\n  \"notes\": \"Want to play this classic!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/library",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"library"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Add Game to Library",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"igdb_game_id\": 1942,\n  \"status\": \"backlogged\",\n  \"rating\": null,\n  \"notes\": \"Want to play this classic!\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/library",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"library"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "83"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"53-2euDRTFvYc1HvBLXssVcQ9ucGA8\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:01:12 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"gameId\": 1\n    },\n    \"message\": \"Game added to library successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Game",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"playing\",\n  \"rating\": 9.5,\n  \"hours_played\": 10.5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/library/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"library",
+								"1"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Update Game",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"playing\",\n  \"rating\": 9.5,\n  \"hours_played\": 10.5\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/library/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"library",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "66"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"42-dMYilSfqa36rR/nh6zYA6DT/600\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:01:26 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": null,\n    \"message\": \"Game updated successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Game",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/library/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"library",
+								"1"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Delete Game",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/library/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"library",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "79"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"4f-8dUqwKvOf8bBaawWpkTGinVY+t8\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:01:32 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": null,\n    \"message\": \"Game removed from library successfully\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Statistics",
+			"item": [
+				{
+					"name": "Get Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"statistics"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get Statistics",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/statistics",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"statistics"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "239"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"ef-CT662e3UnvczcReujeM4Rv/8H6w\""
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 30 Nov 2025 16:01:37 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"statistics\": {\n            \"user_id\": 1,\n            \"total_games\": 0,\n            \"completed_games\": null,\n            \"playing_games\": null,\n            \"backlogged_games\": null,\n            \"dropped_games\": null,\n            \"on_hold_games\": null,\n            \"total_hours\": \"0.00\",\n            \"updated_at\": \"2025-11-30T16:01:32.000Z\"\n        }\n    }\n}"
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000"
+		},
+		{
+			"key": "token",
+			"value": ""
+		}
+	]
+}

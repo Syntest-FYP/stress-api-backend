@@ -309,6 +309,80 @@ exports.getSessionContext = async (req, res) => {
   }
 };
 
+exports.streamChat = async (req, res) => {
+  const userId = req.user._id || req.user.id;
+  const { message, suiteId, sessionId } = req.query;
+
+  if (!message || !suiteId) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required query parameters: message and suiteId",
+    });
+  }
+
+  // Set headers for SSE
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  try {
+    const url = `${PYTHON_BACKEND_URL}/chat/agent/stream`;
+
+    // Fetch endpoints for the suite to provide context
+    const collection = await EndpointCollection.findOne({
+      user_id: userId.toString(),
+      suite_id: suiteId,
+    });
+
+    let endpoints = [];
+    if (collection && collection.endpoints) {
+      endpoints = transformEndpoints(collection.endpoints);
+    }
+
+    // Construct payload for the Python backend (ChatRequest schema)
+    const payload = {
+      message,
+      endpoints: endpoints,
+    };
+
+    const params = new URLSearchParams({
+      user_id: userId.toString(),
+    });
+    if (sessionId) params.append("session_id", sessionId);
+
+    const response = await axios({
+      method: "post",
+      url: `${url}?${params.toString()}`,
+      data: payload,
+      responseType: "stream",
+      timeout: 300000, // Long timeout for streaming
+    });
+
+    response.data.on("data", (chunk) => {
+      res.write(chunk);
+    });
+
+    response.data.on("end", () => {
+      res.end();
+    });
+
+    response.data.on("error", (err) => {
+      console.error("Stream error:", err);
+      res.write(`data: ${JSON.stringify({ error: "Stream error" })}\n\n`);
+      res.end();
+    });
+  } catch (error) {
+    console.error("SSE Proxy Error:", error.message);
+    res.write(
+      `data: ${JSON.stringify({
+        error: "Failed to connect to AI service",
+      })}\n\n`
+    );
+    res.end();
+  }
+};
+
 exports.clearSession = async (req, res) => {
   try {
     const { sessionId } = req.params;

@@ -4,7 +4,7 @@ const { Pool } = require("pg");
 // Using port 5433 to avoid conflict with Windows PostgreSQL service on 5432
 const poolConfig = {
   host: "127.0.0.1",
-  port: 5433, // Changed to 5433 (Docker maps 5433->5432) to avoid Windows PostgreSQL conflict
+  port: 5432, // Changed to 5433 (Docker maps 5433->5432) to avoid Windows PostgreSQL conflict
   database: "stressdb",
   user: "stressapisllgv",
   password: "sllgv20hoptportgresheu", // Original password from docker-compose.yml
@@ -25,7 +25,12 @@ console.log("PostgreSQL Config (HARDCODED FOR TESTING):", {
 // Show masked password for debugging (first 2 and last 2 chars)
 if (poolConfig.password) {
   const pwd = poolConfig.password;
-  const masked = pwd.length > 4 ? `${pwd.substring(0, 2)}${'*'.repeat(pwd.length - 4)}${pwd.substring(pwd.length - 2)}` : '****';
+  const masked =
+    pwd.length > 4
+      ? `${pwd.substring(0, 2)}${"*".repeat(pwd.length - 4)}${pwd.substring(
+          pwd.length - 2
+        )}`
+      : "****";
   console.log("🔍 Password (masked):", masked, `(length: ${pwd.length})`);
 }
 
@@ -68,8 +73,13 @@ function testConnection() {
         code: err.code,
         severity: err.severity,
       });
-      const pwd = poolConfig.password || '';
-      const maskedPwd = pwd.length > 4 ? `${pwd.substring(0, 2)}${'*'.repeat(pwd.length - 4)}${pwd.substring(pwd.length - 2)}` : '****';
+      const pwd = poolConfig.password || "";
+      const maskedPwd =
+        pwd.length > 4
+          ? `${pwd.substring(0, 2)}${"*".repeat(pwd.length - 4)}${pwd.substring(
+              pwd.length - 2
+            )}`
+          : "****";
       console.error("Connection config:", {
         host: poolConfig.host,
         port: poolConfig.port,
@@ -77,17 +87,23 @@ function testConnection() {
         user: poolConfig.user,
         passwordLength: pwd.length,
         passwordMasked: maskedPwd,
-        source: "Hardcoded for testing"
+        source: "Hardcoded for testing",
       });
-      
+
       if (retryCount < maxRetries) {
         retryCount++;
         console.log(`🔄 Retrying connection (${retryCount}/${maxRetries})...`);
         setTimeout(testConnection, 2000);
       } else {
-        console.error("💡 Verify Docker container is running: docker-compose up -d");
-        console.error("💡 Verify password matches Docker container: sllgv20hoptportgresheu");
-        console.error("💡 Try: docker exec -it pg psql -U stressapisllgv -d stressdb");
+        console.error(
+          "💡 Verify Docker container is running: docker-compose up -d"
+        );
+        console.error(
+          "💡 Verify password matches Docker container: sllgv20hoptportgresheu"
+        );
+        console.error(
+          "💡 Try: docker exec -it pg psql -U stressapisllgv -d stressdb"
+        );
       }
     } else {
       console.log("✅ PostgreSQL connection test successful");

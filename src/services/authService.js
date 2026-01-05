@@ -10,7 +10,9 @@ class AuthService {
     });
 
     if (error) {
-      throw new Error("Invalid credentials");
+      console.error("Supabase login error:", error);
+      // Return more specific error message
+      throw new Error(error.message || "Invalid credentials");
     }
 
     return data;

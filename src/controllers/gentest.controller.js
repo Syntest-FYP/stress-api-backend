@@ -7,6 +7,74 @@ const GeneratedTest = require("../models/generated_test.model");
 const PYTHON_BACKEND_URL =
   process.env.PYTHON_BACKEND_URL || "http://localhost:8000";
 
+// Schema optimization functions to reduce LLM context size
+const getOptimizedSchemaForCategory = (fullSchema, categoryName) => {
+  if (!fullSchema || !fullSchema.categories) {
+    return null;
+  }
+
+  // Find the specific category
+  const targetCategory = fullSchema.categories.find(
+    (cat) => cat.name && cat.name.toLowerCase() === categoryName.toLowerCase()
+  );
+
+  if (!targetCategory) {
+    return null;
+  }
+
+  // Return only relevant schema parts
+  return {
+    categories: [targetCategory], // Only the specific category
+    patterns: fullSchema.patterns || {}, // Keep patterns (usually small)
+  };
+};
+
+const getOptimizedSchemaForAllEndpoints = (fullSchema) => {
+  if (!fullSchema) {
+    return null;
+  }
+
+  // For all endpoints, return a more compact version
+  return {
+    categories: fullSchema.categories?.map((cat) => ({
+      name: cat.name,
+      count: cat.count,
+      // Remove endpoint lists to save space
+    })) || [],
+    patterns: fullSchema.patterns || {},
+    // Keep only essential metadata
+    assessment: fullSchema.assessment
+      ? fullSchema.assessment.substring(0, 200) + "..."
+      : null,
+  };
+};
+
+const getMinimalSchemaForSingleEndpoint = (fullSchema, endpoint) => {
+  if (!fullSchema || !endpoint) {
+    return null;
+  }
+
+  // For single endpoint, return minimal relevant info
+  return {
+    patterns: {
+      authentication:
+        fullSchema.patterns?.authentication || "unknown",
+      naming_convention:
+        fullSchema.patterns?.naming_convention || "unknown",
+    },
+    // Only include categories that might be relevant to this endpoint
+    relevant_categories:
+      fullSchema.categories
+        ?.filter((cat) =>
+          cat.endpoints?.some(
+            (ep) =>
+              endpoint.path.includes(ep) || ep.includes(endpoint.path)
+          )
+        )
+        .map((cat) => ({ name: cat.name, count: cat.count })) || [],
+  };
+};
+
 /**
  * Get categories from analyzed schema
  * GET /api/test-generation/categories/:suiteId
@@ -140,12 +208,18 @@ const generateTestsForModule = async (req, res) => {
         tags: ep.tags || [],
       }));
 
+    // Prepare optimized schema for this specific category
+    const optimizedSchema = getOptimizedSchemaForCategory(
+      analysis.analysis?.insights,
+      categoryName
+    );
+
     // Prepare request body for module-from-analyst endpoint
     const requestBody = {
       endpoints: transformedEndpoints,
       module_name: categoryName,
       test_count: test_count,
-      schema: analysis.analysis?.insights || null,
+      schema: optimizedSchema,
       auth_requirements: auth_requirements || null,
       code_context: code_context || null,
       data_providers: data_providers || null,
@@ -277,11 +351,16 @@ const generateAllModules = async (req, res) => {
         tags: ep.tags || [],
       }));
 
+    // Prepare optimized schema for all endpoints
+    const optimizedSchema = getOptimizedSchemaForAllEndpoints(
+      analysis.analysis?.insights
+    );
+
     // Prepare request body for all-endpoints endpoint
     const requestBody = {
       endpoints: transformedEndpoints,
       test_count: test_count,
-      schema: analysis.analysis?.insights || null,
+      schema: optimizedSchema,
       auth_requirements: auth_requirements || null,
       code_context: code_context || null,
       data_providers: data_providers || null,
@@ -393,11 +472,17 @@ const generateSingleEndpointTests = async (req, res) => {
       });
     }
 
+    // Prepare minimal schema for single endpoint
+    const optimizedSchema = getMinimalSchemaForSingleEndpoint(
+      analysis.analysis?.insights,
+      endpoint
+    );
+
     // Prepare request body for single-endpoint endpoint
     const requestBody = {
       endpoint: endpoint,
       test_count: test_count,
-      schema: analysis.analysis?.insights || null,
+      schema: optimizedSchema,
       auth_requirements: auth_requirements || null,
       code_context: code_context || null,
       data_providers: data_providers || null,
@@ -526,10 +611,15 @@ const analyzeContextQuality = async (req, res) => {
         tags: ep.tags || [],
       }));
 
+    // Prepare optimized schema for context analysis
+    const optimizedSchema = getOptimizedSchemaForAllEndpoints(
+      analysis.analysis?.insights
+    );
+
     // Prepare request body
     const requestBody = {
       endpoints: transformedEndpoints,
-      schema: analysis.analysis?.insights || null,
+      schema: optimizedSchema,
       auth_requirements: auth_requirements || null,
       code_context: code_context || null,
       data_providers: data_providers || null,

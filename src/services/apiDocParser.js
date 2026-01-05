@@ -28,6 +28,49 @@ function summarizeRequestBody(requestBody) {
   return { required: requestBody.required || false, content: result };
 }
 
+async function parseUsingGroqLLM(rawText) {
+  const client = new Groq({
+    apiKey: process.env.GROQ_API_KEY || "YOUR_GROQ_API_KEY",
+  });
+
+  const prompt = `
+The following text may contain API documentation but in unknown or broken format.
+Extract all endpoints and return only valid JSON in this format:
+
+{
+  "endpoints": [
+    {
+      "path": "/example",
+      "method": "GET",
+      "description": "string",
+      "parameters": [],
+      "requestBody": null,
+      "responses": {}
+    }
+  ]
+}
+
+TEXT:
+${rawText}
+`;
+
+  const completion = await client.chat.completions.create({
+    model: "mixtral-8x7b-32768",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0,
+  });
+
+  let responseText = completion.choices[0].message.content.trim();
+
+  try {
+    const parsed = JSON.parse(responseText);
+    return parsed.endpoints || [];
+  } catch (e) {
+    console.error("LLM output was not valid JSON.", responseText);
+    throw new Error("GROQ LLM could not infer endpoints.");
+  }
+}
+
 function summarizeResponses(responses) {
   const result = {};
   if (!responses || typeof responses !== "object") return result;
@@ -212,39 +255,49 @@ function normalizeCustomFormat(data) {
  * @returns {Promise<Array>} Normalized endpoints array
  */
 async function parseApiDoc(input) {
+  let rawText = "";
   let data = input;
 
-  if (typeof input === "string") {
-    const content = fs.readFileSync(input, "utf8");
-    data = content.trim().startsWith("{")
-      ? JSON.parse(content)
-      : yaml.load(content);
-  }
-
-  if (data.endpoints) {
-    return normalizeCustomFormat(data);
-  }
-
-  if (data.openapi || data.swagger) {
-    let apiToProcess = data;
-
-    // Convert OpenAPI 3.1 to 3.0 if needed
-    if (data.openapi && data.openapi.startsWith("3.1")) {
-      console.log("Converting OpenAPI 3.1 to 3.0 for compatibility...");
-      apiToProcess = downgradeOpenApi31To30(data);
+  try {
+    if (typeof input === "string") {
+      rawText = fs.readFileSync(input, "utf8");
+      data = rawText.trim().startsWith("{")
+        ? JSON.parse(rawText)
+        : yaml.load(rawText);
     }
 
-    // Parse and bundle the API spec
-    const bundledApi = await SwaggerParser.bundle(apiToProcess);
-    return normalizeOpenApi(bundledApi);
-  }
+    // CUSTOM FORMAT
+    if (data.endpoints) return normalizeCustomFormat(data);
 
-  if (data.info && data.item && (data.info.schema || data.info._postman_id)) {
-    const collection = new Collection(data);
-    return normalizePostman(collection);
-  }
+    // OPENAPI / SWAGGER
+    if (data.openapi || data.swagger) {
+      let apiToProcess = data;
 
-  throw new Error("Unsupported API documentation format.");
+      if (data.openapi && data.openapi.startsWith("3.1")) {
+        console.log("Converting OpenAPI 3.1 → 3.0 for compatibility...");
+        apiToProcess = downgradeOpenApi31To30(data);
+      }
+
+      const bundled = await SwaggerParser.bundle(apiToProcess);
+      return normalizeOpenApi(bundled);
+    }
+
+    // POSTMAN
+    if (data.info && data.item && (data.info.schema || data.info._postman_id)) {
+      return normalizePostman(new Collection(data));
+    }
+
+    // If none matched, fall to GROQ
+    console.log(
+      "⚠ No known API format recognized — switching to GROQ LLM inference..."
+    );
+    return await parseUsingGroqLLM(rawText || JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.log("⚠ Parsing failed — using GROQ LLM fallback...", error);
+
+    // Final fallback: send raw text to GROQ LLM
+    return await parseUsingGroqLLM(rawText || String(input));
+  }
 }
 
 module.exports = {
