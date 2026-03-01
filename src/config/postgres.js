@@ -28,7 +28,7 @@ if (poolConfig.password) {
   const masked =
     pwd.length > 4
       ? `${pwd.substring(0, 2)}${"*".repeat(pwd.length - 4)}${pwd.substring(
-          pwd.length - 2
+          pwd.length - 2,
         )}`
       : "****";
   console.log("🔍 Password (masked):", masked, `(length: ${pwd.length})`);
@@ -77,7 +77,7 @@ function testConnection() {
       const maskedPwd =
         pwd.length > 4
           ? `${pwd.substring(0, 2)}${"*".repeat(pwd.length - 4)}${pwd.substring(
-              pwd.length - 2
+              pwd.length - 2,
             )}`
           : "****";
       console.error("Connection config:", {
@@ -96,13 +96,13 @@ function testConnection() {
         setTimeout(testConnection, 2000);
       } else {
         console.error(
-          "💡 Verify Docker container is running: docker-compose up -d"
+          "💡 Verify Docker container is running: docker-compose up -d",
         );
         console.error(
-          "💡 Verify password matches Docker container: sllgv20hoptportgresheu"
+          "💡 Verify password matches Docker container: sllgv20hoptportgresheu",
         );
         console.error(
-          "💡 Try: docker exec -it pg psql -U stressapisllgv -d stressdb"
+          "💡 Try: docker exec -it pg psql -U stressapisllgv -d stressdb",
         );
       }
     } else {

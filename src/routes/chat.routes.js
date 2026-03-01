@@ -7,6 +7,7 @@ const {
   getSessionContext,
   clearSession,
   streamChat,
+  getChatHistory,
 } = require("../controllers/chat.controller");
 
 router.use(verifyAuth);
@@ -21,6 +22,7 @@ router.post("/orchestrate", orchestrateChat);
 
 // Session helpers
 router.get("/session/:sessionId/context", getSessionContext);
+router.get("/session/:sessionId/history", getChatHistory);
 router.delete("/session/:sessionId", clearSession);
 
 module.exports = router;

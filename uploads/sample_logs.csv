@@ -1,0 +1,9 @@
+timestamp,path,method,status,responseTime,userId,ip,error
+2026-02-15T10:00:00Z,/api/login,POST,200,120,user1,192.168.1.1,
+2026-02-15T10:01:00Z,/api/login,POST,401,95,user2,192.168.1.2,Invalid credentials
+2026-02-15T10:05:00Z,/api/users/profile,GET,200,450,user1,192.168.1.1,
+2026-02-15T10:10:00Z,/api/orders,POST,500,2500,user1,192.168.1.1,Database connection timeout
+2026-02-15T10:11:00Z,/api/orders,POST,500,2800,user3,192.168.1.5,Database connection timeout
+2026-02-15T10:15:00Z,/api/orders,POST,500,3000,user4,192.168.1.8,Database connection timeout
+2026-02-15T10:20:00Z,/api/products,GET,200,80,user1,192.168.1.1,
+2026-02-15T10:25:00Z,/api/orders,POST,201,300,user5,192.168.1.10,

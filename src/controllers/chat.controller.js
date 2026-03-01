@@ -131,16 +131,11 @@ exports.postChatMessage = async (req, res) => {
     const payload = {
       message,
       endpoints: enrichedEndpoints,
-      // Only pass schema if it exists and is not too large
-      // Endpoints contain the essential info anyway
       schema: schema,
       test_count: testCount,
+      suite_id: suiteId,
+      session_id: sessionId || null,
     };
-
-    // Add session_id to payload if available
-    if (sessionId) {
-      payload.session_id = sessionId;
-    }
 
     const response = await axios.post(url, payload, {
       headers: { "Content-Type": "application/json" },
@@ -241,6 +236,8 @@ exports.orchestrateChat = async (req, res) => {
       data_providers: data_providers || null,
       entity_relationships: entity_relationships || null,
       test_count: test_count || 3,
+      suite_id: suiteId,
+      session_id: sessionId || null,
     };
 
     const response = await axios.post(url, payload, {
@@ -344,6 +341,7 @@ exports.streamChat = async (req, res) => {
     const payload = {
       message,
       endpoints: endpoints,
+      suite_id: suiteId,
     };
 
     const params = new URLSearchParams({
@@ -380,6 +378,35 @@ exports.streamChat = async (req, res) => {
       })}\n\n`
     );
     res.end();
+  }
+};
+
+exports.getChatHistory = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId)
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing sessionId" });
+
+    const response = await axios.get(
+      `${PYTHON_BACKEND_URL}/chat/history/${encodeURIComponent(sessionId)}`,
+      { timeout: 15000 }
+    );
+    return res.status(200).json({ success: true, data: response.data });
+  } catch (error) {
+    if (error.response) {
+      return res.status(error.response.status).json({
+        success: false,
+        message: "Failed to fetch chat history",
+        error: error.response.data,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch chat history",
+      error: error.message,
+    });
   }
 };
 

@@ -506,6 +506,7 @@ const generateSingleEndpointTests = async (req, res) => {
         suite_id: suiteId,
         source: "single",
         endpoint: {
+          name: endpoint.name,
           method: endpoint.method,
           path: endpoint.path,
           base_url: endpoint.base_url || null,
