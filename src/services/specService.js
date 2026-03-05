@@ -127,6 +127,24 @@ async function getAnalysisService(user_id, suite_id) {
   const analysis = await getSpecAnalysisBySuite(suite_id);
   if (!analysis) throw new Error("No stored analysis found for this suite");
 
+  // Add spec_file_content to the analysis object
+  const specDir = path.join(
+    process.cwd(),
+    "uploads",
+    String(user_id),
+    String(suite_id)
+  );
+  const possibleFiles = ["spec.json", "spec.yaml", "spec.yml"];
+
+  const specFilePath = possibleFiles
+    .map((f) => path.join(specDir, f))
+    .find((p) => fs.existsSync(p));
+
+  if (specFilePath) {
+    const specContent = fs.readFileSync(specFilePath, "utf8");
+    analysis.spec_file_content = specContent; // Attach the raw spec content
+  }
+
   return analysis;
 }
 

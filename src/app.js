@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const { initializeRedisPublisher } = require("./utils/redisPublisher"); // Import Redis publisher
 
 const userRoutes = require("./routes/user.routes");
 const testRoutes = require("./routes/test.routes");
@@ -25,6 +26,9 @@ dotenv.config();
 require("./config/postgres");
 
 const app = express();
+
+// Initialize Redis Publisher
+initializeRedisPublisher();
 
 // -------> MIDDLEWARE <-------
 
