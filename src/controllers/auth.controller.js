@@ -10,18 +10,27 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      await AuthService.loginWithPassword(email, password);
-      await AuthService.sendEmailOTP(email);
+      const data = await AuthService.loginWithPassword(email, password);
+      // OTP disabled — skip sendEmailOTP and log in directly
+      // await AuthService.sendEmailOTP(email);
 
-      res.cookie("verification_email", email, {
+      res.cookie("access_token", data.session.access_token, {
         httpOnly: true,
         secure: NODE_ENV === "production",
         sameSite: NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 10 * 60 * 1000,
+        maxAge: data.session.expires_in * 1000,
         domain: COOKIE_DOMAIN,
       });
 
-      return sendResponse(res, 200, "OTP sent to email");
+      res.cookie("refresh_token", data.session.refresh_token, {
+        httpOnly: true,
+        secure: NODE_ENV === "production",
+        sameSite: NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        domain: COOKIE_DOMAIN,
+      });
+
+      return sendResponse(res, 200, "Login successful", { user: data.user });
     } catch (error) {
       return sendError(res, 401, error.message);
     }

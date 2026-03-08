@@ -38,7 +38,9 @@ app.use(morgan("dev"));
 
 // Replace the allowedOrigin section with this:
 const allowedOrigins = [
+  "http://localhost:3000",
   "http://localhost:3001",
+  "http://127.0.0.1:3000",
   "http://127.0.0.1:3001",
   "https://nexdash.cyber1337x.dev"
 ];
@@ -49,7 +51,7 @@ app.use(
     origin: function (origin, callback) {
       // Allow requests with no origin (like Postman)
       if (!origin) return callback(null, true);
-      
+
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
