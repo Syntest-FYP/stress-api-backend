@@ -2,6 +2,8 @@ const axios = require("axios");
 const EndpointCollection = require("../models/Endpoint");
 const { getSpecAnalysisBySuite } = require("../models/spec.model");
 const GeneratedTest = require("../models/generated_test.model");
+const { getGeneratedTestResultsBySuite } = require("../models/result.model"); // Import getGeneratedTestResultsBySuite
+const { publishA2AMessage } = require("../utils/redisPublisher"); // Import Redis publisher
 
 // Configuration
 const PYTHON_BACKEND_URL =
@@ -238,7 +240,7 @@ const generateTestsForModule = async (req, res) => {
 
     // Persist generated tests
     try {
-      await GeneratedTest.create({
+      const generatedTestsDoc = await GeneratedTest.create({
         user_id: userId.toString(),
         suite_id: suiteId,
         source: "module",
@@ -253,9 +255,21 @@ const generateTestsForModule = async (req, res) => {
         tests: response.data?.test_cases || response.data?.tests || null,
         raw_response: response.data || null,
       });
+      // Publish A2A message for generated tests
+      await publishA2AMessage(
+        `a2a:generated_tests:${suiteId}`,
+        {
+          message_type: "generated_tests",
+          conversation_id: suiteId, // Use suiteId as conversation_id for simplicity, or generate a new one if appropriate
+          payload: {
+            suite_id: suiteId,
+            test_cases: generatedTestsDoc.tests || [],
+          },
+        }
+      );
     } catch (persistErr) {
       console.error(
-        "[WARN] Failed to persist generated module tests:",
+        "[WARN] Failed to persist generated module tests or publish A2A message:",
         persistErr.message
       );
     }
@@ -379,7 +393,7 @@ const generateAllModules = async (req, res) => {
 
     // Persist generated tests
     try {
-      await GeneratedTest.create({
+      const generatedTestsDoc = await GeneratedTest.create({
         user_id: userId.toString(),
         suite_id: suiteId,
         source: "all",
@@ -393,9 +407,21 @@ const generateAllModules = async (req, res) => {
         tests: response.data?.test_cases || response.data?.tests || null,
         raw_response: response.data || null,
       });
+      // Publish A2A message for generated tests
+      await publishA2AMessage(
+        `a2a:generated_tests:${suiteId}`,
+        {
+          message_type: "generated_tests",
+          conversation_id: suiteId, // Use suiteId as conversation_id for simplicity
+          payload: {
+            suite_id: suiteId,
+            test_cases: generatedTestsDoc.tests || [],
+          },
+        }
+      );
     } catch (persistErr) {
       console.error(
-        "[WARN] Failed to persist generated all-endpoints tests:",
+        "[WARN] Failed to persist generated all-endpoints tests or publish A2A message:",
         persistErr.message
       );
     }
@@ -501,7 +527,7 @@ const generateSingleEndpointTests = async (req, res) => {
 
     // Persist generated tests
     try {
-      await GeneratedTest.create({
+      const generatedTestsDoc = await GeneratedTest.create({
         user_id: userId.toString(),
         suite_id: suiteId,
         source: "single",
@@ -523,9 +549,21 @@ const generateSingleEndpointTests = async (req, res) => {
         tests: response.data?.test_cases || response.data?.tests || null,
         raw_response: response.data || null,
       });
+      // Publish A2A message for generated tests
+      await publishA2AMessage(
+        `a2a:generated_tests:${suiteId}`,
+        {
+          message_type: "generated_tests",
+          conversation_id: suiteId, // Use suiteId as conversation_id for simplicity
+          payload: {
+            suite_id: suiteId,
+            test_cases: generatedTestsDoc.tests || [],
+          },
+        }
+      );
     } catch (persistErr) {
       console.error(
-        "[WARN] Failed to persist generated single-endpoint tests:",
+        "[WARN] Failed to persist generated single-endpoint tests or publish A2A message:",
         persistErr.message
       );
     }
@@ -681,12 +719,43 @@ const getStoredGeneratedTests = async (req, res) => {
       .limit(200)
       .lean();
 
+    const executionResults = await getGeneratedTestResultsBySuite(suiteId, userId);
+
+    // Create a map for quick lookup of execution results by conversation_id and test_case_name
+    const resultsMap = new Map();
+    for (const res of executionResults) {
+      const key = `${res.conversation_id}-${res.test_case_name}`;
+      if (!resultsMap.has(key)) {
+        resultsMap.set(key, []);
+      }
+      resultsMap.get(key).push(res);
+    }
+
+    // Iterate through generated test items and enrich with execution results
+    const enrichedItems = items.map((item) => {
+      if (item.tests && Array.isArray(item.tests)) {
+        const enrichedTests = item.tests.map((testCase) => {
+          // Assuming testCase has a conversation_id and name for linking
+          const testCaseName = testCase.name; // This should be the 'operationId' from the AI backend
+          const conversationId = item.raw_response?.conversation_id || item.suite_id; // Derive conversation_id from generatedTestDoc or suiteId
+          const key = `${conversationId}-${testCaseName}`;
+          const matchingResults = resultsMap.get(key) || [];
+          
+          // Attach results to the test case
+          return { ...testCase, execution_results: matchingResults };
+        });
+        return { ...item, tests: enrichedTests };
+      }
+      return item;
+    });
+
     return res.status(200).json({
       success: true,
-      data: items,
+      data: enrichedItems,
       metadata: {
         suite_id: suiteId,
-        count: items.length,
+        count: enrichedItems.length,
+        total_execution_results: executionResults.length,
       },
     });
   } catch (error) {

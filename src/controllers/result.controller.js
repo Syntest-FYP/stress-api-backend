@@ -1,6 +1,7 @@
 const { createResult, getResultById, getResultsByExecution, deleteResult } = require('../models/result.model');
 const { getExecutionById } = require('../models/execution.model');
 const { getTestById } = require('../models/test.model');
+const resultService = require("../services/result.service");
 
 exports.create = async (req, res) => {
   const { execution_id, metric_type, metric_name, metric_value, metric_unit, tags, timestamp, raw_data } = req.body;
@@ -55,4 +56,43 @@ exports.delete = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
   }
-}; 
+};
+
+// POST /api/test-results
+exports.createGeneratedTestResult = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const resultData = { ...req.body, user_id };
+    const newResult = await resultService.createGeneratedTestResult(resultData);
+    res.status(201).json(newResult);
+  } catch (error) {
+    console.error("Error creating generated test result:", error);
+    res.status(500).json({ error: "Failed to create generated test result" });
+  }
+};
+
+// GET /api/test-results/suite/:suiteId
+exports.getGeneratedTestResultsBySuite = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const suite_id = req.params.suiteId;
+    const results = await resultService.getGeneratedTestResultsBySuite(suite_id, user_id);
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching generated test results by suite:", error);
+    res.status(500).json({ error: "Failed to fetch generated test results" });
+  }
+};
+
+// GET /api/test-results/conversation/:conversationId
+exports.getGeneratedTestResultsByConversationId = async (req, res) => {
+    try {
+      const user_id = req.user.id;
+      const conversation_id = req.params.conversationId;
+      const results = await resultService.getGeneratedTestResultsByConversationId(conversation_id, user_id);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching generated test results by conversation ID:", error);
+      res.status(500).json({ error: "Failed to fetch generated test results" });
+    }
+  }; 

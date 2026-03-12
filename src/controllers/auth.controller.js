@@ -34,7 +34,7 @@ class AuthController {
         // Clear any lingering verification cookie
         res.clearCookie(
           "verification_email",
-          COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}
+          COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {},
         );
 
         return sendResponse(res, 200, "TOTP required", { requiresTOTP: true });
@@ -62,7 +62,7 @@ class AuthController {
       // Clear verification cookie if it exists
       res.clearCookie(
         "verification_email",
-        COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}
+        COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {},
       );
 
       return sendResponse(res, 200, "Login successful", { user: data.user });
@@ -105,7 +105,7 @@ class AuthController {
         "Registration successful. Please verify your email.",
         {
           user: data.user,
-        }
+        },
       );
     } catch (error) {
       return sendError(res, 400, error.message);
@@ -151,7 +151,7 @@ class AuthController {
 
         res.clearCookie(
           "verification_email",
-          COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}
+          COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {},
         );
 
         return sendResponse(res, 200, "TOTP required", { requiresTOTP: true });
@@ -179,7 +179,7 @@ class AuthController {
 
       res.clearCookie(
         "verification_email",
-        COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}
+        COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {},
       );
 
       return sendResponse(res, 200, "Login successful", { user: data.user });

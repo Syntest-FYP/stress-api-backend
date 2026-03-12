@@ -22,6 +22,7 @@ async function getAllTestSuites(req, res) {
 
 async function getTestSuiteById(req, res) {
   try {
+    console.log("[SuiteController] getTestSuiteById - User ID:", req.user.id, "Suite ID:", req.params.id);
     const suite = await TestService.getTestSuiteById(
       req.user.id,
       req.params.id

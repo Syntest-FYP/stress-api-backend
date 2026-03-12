@@ -26,6 +26,7 @@ const verifyAuth = async (req, res, next) => {
 
     const user = await AuthService.getUserByToken(accessToken);
     req.user = user;
+    console.log("[AuthMiddleware] User from token:", req.user);
     next();
   } catch (error) {
     console.error("Auth middleware error:", error.message);

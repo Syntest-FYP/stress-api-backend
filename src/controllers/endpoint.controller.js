@@ -28,6 +28,7 @@ class EndpointController {
       const endpoints = await EndpointService.getEndpointsBySuite(user_id, suite_id);
       return sendResponse(res, 200, 'Endpoints retrieved successfully', endpoints);
     } catch (error) {
+      console.error("[EndpointController Error] getBySuite:", error);
       return sendError(res, 400, error.message);
     }
   }

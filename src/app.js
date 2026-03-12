@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const { initializeRedisPublisher } = require("./utils/redisPublisher"); // Import Redis publisher
 
 const userRoutes = require("./routes/user.routes");
 const testRoutes = require("./routes/test.routes");
@@ -27,11 +28,16 @@ require("./config/postgres");
 
 const app = express();
 
+// Initialize Redis Publisher
+initializeRedisPublisher();
+
 // -------> MIDDLEWARE <-------
 
 // CORS MUST be first to handle preflight requests properly
 const allowedOrigins = [
+  "http://localhost:3000",
   "http://localhost:3001",
+  "http://127.0.0.1:3000",
   "http://127.0.0.1:3001",
   "https://nexdash.cyber1337x.dev"
 ];
@@ -45,7 +51,7 @@ app.use(
     origin: function (origin, callback) {
       // Allow requests with no origin (like Postman)
       if (!origin) return callback(null, true);
-      
+
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
