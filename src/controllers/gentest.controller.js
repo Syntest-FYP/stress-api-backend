@@ -768,6 +768,64 @@ const getStoredGeneratedTests = async (req, res) => {
   }
 };
 
+/**
+ * Report generated tests from AI Agent
+ * POST /api/generate/tests/report
+ */
+const reportGeneratedTests = async (req, res) => {
+  try {
+    const { 
+      suiteId, 
+      userId, 
+      source, 
+      categoryName, 
+      endpoint, 
+      requestOptions, 
+      tests, 
+      rawResponse 
+    } = req.body;
+
+    if (!suiteId || !userId || !tests) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: suiteId, userId, and tests",
+      });
+    }
+
+    // Persist to MongoDB
+    const newTestReport = await GeneratedTest.create({
+      user_id: userId,
+      suite_id: suiteId,
+      source: source || "single",
+      category_name: categoryName || null,
+      endpoint: endpoint ? {
+        name: endpoint.name,
+        method: endpoint.method,
+        path: endpoint.path,
+        base_url: endpoint.base_url || null,
+        headers: endpoint.headers || {},
+        query_params: endpoint.query_params || {},
+      } : null,
+      request_options: requestOptions || {},
+      tests: tests,
+      raw_response: rawResponse || null,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Tests reported and persisted successfully",
+      testId: newTestReport._id
+    });
+  } catch (error) {
+    console.error("[ERROR] reportGeneratedTests:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to report generated tests",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCategories,
   generateTestsForModule,
@@ -775,4 +833,5 @@ module.exports = {
   generateSingleEndpointTests,
   analyzeContextQuality,
   getStoredGeneratedTests,
+  reportGeneratedTests,
 };

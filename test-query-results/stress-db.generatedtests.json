@@ -1,0 +1,345 @@
+[{
+  "_id": {
+    "$oid": "69a46a7b5f6124bc57271d25"
+  },
+  "user_id": "7dbb74af-3a58-4424-8553-08343828d4af",
+  "suite_id": "2a99104b-d236-4a6c-98ea-fcd2c57126e9",
+  "source": "single",
+  "category_name": null,
+  "endpoint": {
+    "method": "GET",
+    "path": "/companies/{companyId}",
+    "base_url": null
+  },
+  "request_options": {
+    "test_count": 3,
+    "auth_requirements": null,
+    "code_context": null,
+    "data_providers": null,
+    "entity_relationships": null
+  },
+  "tests": [
+    {
+      "testCases": [
+        {
+          "testCaseId": "TC_GET_COMPANY_001",
+          "description": "Positive test case: Retrieve a company with a valid company ID",
+          "request": {
+            "method": "GET",
+            "path": "/companies/1"
+          },
+          "expectedResponse": {
+            "statusCode": 200,
+            "responseBody": "COMPANY_RETRIEVED"
+          }
+        },
+        {
+          "testCaseId": "TC_GET_COMPANY_002",
+          "description": "Negative test case: Retrieve a company with an invalid company ID (non-integer)",
+          "request": {
+            "method": "GET",
+            "path": "/companies/abc"
+          },
+          "expectedResponse": {
+            "statusCode": 400,
+            "responseBody": "Company ID is not a valid integer"
+          }
+        },
+        {
+          "testCaseId": "TC_GET_COMPANY_003",
+          "description": "Edge case test: Retrieve a company that is in an invalid state (COMPANY_DELETED)",
+          "request": {
+            "method": "GET",
+            "path": "/companies/2"
+          },
+          "expectedResponse": {
+            "statusCode": 403,
+            "responseBody": "Unauthorized access to company data"
+          }
+        }
+      ]
+    }
+  ],
+  "raw_response": {
+    "endpoint": {
+      "method": "GET",
+      "path": "/companies/{companyId}",
+      "description": "",
+      "parameters": [],
+      "name": null,
+      "type": null
+    },
+    "test_cases": [
+      {
+        "testCases": [
+          {
+            "testCaseId": "TC_GET_COMPANY_001",
+            "description": "Positive test case: Retrieve a company with a valid company ID",
+            "request": {
+              "method": "GET",
+              "path": "/companies/1"
+            },
+            "expectedResponse": {
+              "statusCode": 200,
+              "responseBody": "COMPANY_RETRIEVED"
+            }
+          },
+          {
+            "testCaseId": "TC_GET_COMPANY_002",
+            "description": "Negative test case: Retrieve a company with an invalid company ID (non-integer)",
+            "request": {
+              "method": "GET",
+              "path": "/companies/abc"
+            },
+            "expectedResponse": {
+              "statusCode": 400,
+              "responseBody": "Company ID is not a valid integer"
+            }
+          },
+          {
+            "testCaseId": "TC_GET_COMPANY_003",
+            "description": "Edge case test: Retrieve a company that is in an invalid state (COMPANY_DELETED)",
+            "request": {
+              "method": "GET",
+              "path": "/companies/2"
+            },
+            "expectedResponse": {
+              "statusCode": 403,
+              "responseBody": "Unauthorized access to company data"
+            }
+          }
+        ]
+      }
+    ],
+    "test_count": 1,
+    "context_quality": "low",
+    "processing_time": 1.9,
+    "data_provider_ready": false,
+    "endpoint_analysis": {
+      "endpoint": {
+        "endpoint_id": "GET_/companies/{companyId}",
+        "method": "GET",
+        "path": "/companies/{companyId}",
+        "request_schema": null,
+        "responses": null,
+        "security": []
+      },
+      "analysis": {
+        "endpoint_id": "GET_/companies/{companyId}",
+        "constraints": {
+          "companyId": "integer, required, greater than 0"
+        },
+        "error_cases": [
+          "Company not found",
+          "Invalid company ID",
+          "Unauthorized access to company data",
+          "Company ID is not a valid integer"
+        ]
+      },
+      "workflow": {
+        "endpoint_id": "GET_/companies/{companyId}",
+        "required_state": null,
+        "produced_state": "COMPANY_RETRIEVED",
+        "invalid_states": [
+          "COMPANY_DELETED",
+          "COMPANY_ARCHIVED"
+        ]
+      },
+      "dependencies": {
+        "required_prior_endpoints": [
+          "createCompany",
+          "listCompanies"
+        ]
+      },
+      "identifiers": {
+        "companyId": {
+          "produced_by": [
+            "likely_creator_endpoint"
+          ]
+        }
+      }
+    }
+  },
+  "generated_at": {
+    "$date": "2026-03-01T16:34:03.437Z"
+  },
+  "createdAt": {
+    "$date": "2026-03-01T16:34:03.441Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-01T16:34:03.441Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69a46a7d5f6124bc57271d27"
+  },
+  "user_id": "7dbb74af-3a58-4424-8553-08343828d4af",
+  "suite_id": "2a99104b-d236-4a6c-98ea-fcd2c57126e9",
+  "source": "single",
+  "category_name": null,
+  "endpoint": {
+    "method": "GET",
+    "path": "/companies/{companyId}/androidApps",
+    "base_url": null
+  },
+  "request_options": {
+    "test_count": 3,
+    "auth_requirements": null,
+    "code_context": null,
+    "data_providers": null,
+    "entity_relationships": null
+  },
+  "tests": [
+    {
+      "testCases": [
+        {
+          "testCaseId": "TC_GET_ANDROID_APPS_001",
+          "description": "Positive test case to retrieve android apps for a valid company",
+          "request": {
+            "method": "GET",
+            "path": "/companies/123/androidApps"
+          },
+          "expectedResponse": {
+            "statusCode": 200,
+            "responseBody": "List of android apps for company 123"
+          }
+        },
+        {
+          "testCaseId": "TC_GET_ANDROID_APPS_002",
+          "description": "Negative test case to retrieve android apps for a non-existent company",
+          "request": {
+            "method": "GET",
+            "path": "/companies/999/androidApps"
+          },
+          "expectedResponse": {
+            "statusCode": 404,
+            "responseBody": "Company not found"
+          }
+        },
+        {
+          "testCaseId": "TC_GET_ANDROID_APPS_003",
+          "description": "Edge case test to retrieve android apps for a company with no android apps",
+          "request": {
+            "method": "GET",
+            "path": "/companies/123/androidApps"
+          },
+          "expectedResponse": {
+            "statusCode": 200,
+            "responseBody": "Empty list of android apps for company 123"
+          }
+        }
+      ]
+    }
+  ],
+  "raw_response": {
+    "endpoint": {
+      "method": "GET",
+      "path": "/companies/{companyId}/androidApps",
+      "description": "",
+      "parameters": [],
+      "name": null,
+      "type": null
+    },
+    "test_cases": [
+      {
+        "testCases": [
+          {
+            "testCaseId": "TC_GET_ANDROID_APPS_001",
+            "description": "Positive test case to retrieve android apps for a valid company",
+            "request": {
+              "method": "GET",
+              "path": "/companies/123/androidApps"
+            },
+            "expectedResponse": {
+              "statusCode": 200,
+              "responseBody": "List of android apps for company 123"
+            }
+          },
+          {
+            "testCaseId": "TC_GET_ANDROID_APPS_002",
+            "description": "Negative test case to retrieve android apps for a non-existent company",
+            "request": {
+              "method": "GET",
+              "path": "/companies/999/androidApps"
+            },
+            "expectedResponse": {
+              "statusCode": 404,
+              "responseBody": "Company not found"
+            }
+          },
+          {
+            "testCaseId": "TC_GET_ANDROID_APPS_003",
+            "description": "Edge case test to retrieve android apps for a company with no android apps",
+            "request": {
+              "method": "GET",
+              "path": "/companies/123/androidApps"
+            },
+            "expectedResponse": {
+              "statusCode": 200,
+              "responseBody": "Empty list of android apps for company 123"
+            }
+          }
+        ]
+      }
+    ],
+    "test_count": 1,
+    "context_quality": "low",
+    "processing_time": 1.49,
+    "data_provider_ready": false,
+    "endpoint_analysis": {
+      "endpoint": {
+        "endpoint_id": "GET_/companies/{companyId}/androidApps",
+        "method": "GET",
+        "path": "/companies/{companyId}/androidApps",
+        "request_schema": null,
+        "responses": null,
+        "security": []
+      },
+      "analysis": {
+        "endpoint_id": "GET_/companies/{companyId}/androidApps",
+        "constraints": {
+          "companyId": "integer, required, companyId must exist in the database"
+        },
+        "error_cases": [
+          "Company not found",
+          "Invalid company ID",
+          "Android apps not found for the given company",
+          "Unauthorized access to company data",
+          "Invalid API credentials"
+        ]
+      },
+      "workflow": {
+        "endpoint_id": "GET_/companies/{companyId}/androidApps",
+        "required_state": null,
+        "produced_state": null,
+        "invalid_states": []
+      },
+      "dependencies": {
+        "required_prior_endpoints": [
+          "createCompany",
+          "getCompany",
+          "createAndroidApp"
+        ]
+      },
+      "identifiers": {
+        "companyId": {
+          "produced_by": [
+            "likely_creator_endpoint"
+          ]
+        }
+      }
+    }
+  },
+  "generated_at": {
+    "$date": "2026-03-01T16:34:05.354Z"
+  },
+  "createdAt": {
+    "$date": "2026-03-01T16:34:05.354Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-01T16:34:05.354Z"
+  },
+  "__v": 0
+}]

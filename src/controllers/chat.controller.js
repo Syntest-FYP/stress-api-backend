@@ -438,3 +438,31 @@ exports.clearSession = async (req, res) => {
     });
   }
 };
+
+exports.getSuiteChatSessions = async (req, res) => {
+  try {
+    const { suiteId } = req.params;
+    if (!suiteId) {
+      return res.status(400).json({ success: false, message: "Missing suiteId" });
+    }
+
+    const response = await axios.get(
+      `${PYTHON_BACKEND_URL}/chat/sessions/${encodeURIComponent(suiteId)}`,
+      { timeout: 15000 }
+    );
+    return res.status(200).json({ success: true, data: response.data });
+  } catch (error) {
+    if (error.response) {
+      return res.status(error.response.status).json({
+        success: false,
+        message: "Failed to fetch suite sessions",
+        error: error.response.data,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch suite sessions",
+      error: error.message,
+    });
+  }
+};
