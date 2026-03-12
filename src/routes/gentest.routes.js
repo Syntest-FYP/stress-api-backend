@@ -7,6 +7,7 @@ const {
   generateSingleEndpointTests,
   analyzeContextQuality,
   getStoredGeneratedTests,
+  reportGeneratedTests,
 } = require("../controllers/gentest.controller");
 const { verifyAuth } = require("../middleware/auth");
 
@@ -29,5 +30,8 @@ router.post("/context/analyze/:suiteId", analyzeContextQuality);
 
 // Get stored generated tests for a suite
 router.get("/stored/:suiteId", getStoredGeneratedTests);
+
+// Report generated tests from AI agent
+router.post("/report", reportGeneratedTests);
 
 module.exports = router;
