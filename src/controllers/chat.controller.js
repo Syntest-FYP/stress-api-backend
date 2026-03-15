@@ -128,6 +128,8 @@ exports.postChatMessage = async (req, res) => {
     // Endpoints are already enriched from transformEndpoints
     const enrichedEndpoints = endpoints;
 
+    const accessToken = req.cookies.access_token || req.headers.authorization?.substring(7);
+
     const payload = {
       message,
       endpoints: enrichedEndpoints,
@@ -135,6 +137,8 @@ exports.postChatMessage = async (req, res) => {
       test_count: testCount,
       suite_id: suiteId,
       session_id: sessionId || null,
+      accessToken: accessToken || null,
+      userId: userId.toString(),
     };
 
     const response = await axios.post(url, payload, {
@@ -222,6 +226,8 @@ exports.orchestrateChat = async (req, res) => {
     const schema = analysis?.analysis?.insights || null;
 
     const url = `${PYTHON_BACKEND_URL}/chat/orchestrate`;
+    const accessToken = req.cookies.access_token || req.headers.authorization?.substring(7);
+
     const payload = {
       message,
       endpoints: endpoints.map((ep) => ({
@@ -238,6 +244,8 @@ exports.orchestrateChat = async (req, res) => {
       test_count: test_count || 3,
       suite_id: suiteId,
       session_id: sessionId || null,
+      accessToken: accessToken || null,
+      userId: userId.toString(),
     };
 
     const response = await axios.post(url, payload, {
@@ -337,17 +345,21 @@ exports.streamChat = async (req, res) => {
       endpoints = transformEndpoints(collection.endpoints);
     }
 
+    const accessToken = req.cookies.access_token || req.headers.authorization?.substring(7);
+
     // Construct payload for the Python backend (ChatRequest schema)
     const payload = {
       message,
       endpoints: endpoints,
       suite_id: suiteId,
+      accessToken: accessToken || null,
     };
 
     const params = new URLSearchParams({
       user_id: userId.toString(),
     });
     if (sessionId) params.append("session_id", sessionId);
+    if (accessToken) params.append("access_token", accessToken);
 
     const response = await axios({
       method: "post",
