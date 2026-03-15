@@ -261,6 +261,7 @@ async function parseApiDoc(input) {
   try {
     if (typeof input === "string") {
       rawText = fs.readFileSync(input, "utf8");
+      rawText = rawText.replace(/^\uFEFF/, "");
       data = rawText.trim().startsWith("{")
         ? JSON.parse(rawText)
         : yaml.load(rawText);

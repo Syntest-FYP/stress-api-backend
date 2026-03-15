@@ -1,78 +1,261 @@
-const monitoringService = require('../services/monitoringService');
-const PassiveLog = require('../models/passiveLog.model');
+const fs = require("fs");
+const path = require("path");
+const axios = require("axios");
+const { 
+  createBatch, 
+  getBatchById, 
+  getBatchesByUser, 
+  getAnalyticsByBatch, 
+  getAnomaliesByBatch, 
+  deleteBatch,
+  updateBatchStatus
+} = require("../models/monitoring.model");
+const { ingestionQueue } = require("../config/queue");
+const LogIngestionService = require("../services/logIngestionService");
 
+const PYTHON_BACKEND_URL = process.env.AI_BACKEND_URL || "http://localhost:8000";
+
+/**
+ * Upload a log file
+ */
 exports.uploadAndIngest = async (req, res) => {
   try {
+    console.log(req.file);
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const { format, fieldMapping } = req.body;
-    const mapping = fieldMapping ? JSON.parse(fieldMapping) : null;
+    console.log(req.body);
+    const { format, field_mapping, suite_id } = req.body;
+
+    if (!suite_id) {
+       // Clean up file if suite_id is missing
+       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+       return res.status(400).json({ error: "suite_id is required" });
+    }
+
+    const mapping = field_mapping ? (typeof field_mapping === 'string' ? JSON.parse(field_mapping) : field_mapping) : null;
     
-    // Detect format from extension if not provided
-    const detectedFormat = format || req.file.originalname.split('.').pop();
+    // Auto-detect format if not provided
+    const detectedFormat = format || await LogIngestionService.detectFormat(req.file.path);
+    
+    if (detectedFormat === "unknown") {
+        return res.status(400).json({ error: "Could not auto-detect log format. Please specify format (json, csv, ndjson, elk)." });
+    }
 
-    const result = await monitoringService.ingestLogs(
-      req.file.path,
-      detectedFormat,
-      mapping,
-      'file_upload'
-    );
+    // Create batch record
+    const batch = await createBatch({
+      userId: req.user.id,
+      suiteId: suite_id,
+      filename: req.file.originalname,
+      format: detectedFormat,
+      fieldMapping: mapping
+    });
 
-    res.status(200).json({
-      message: 'Logs ingested successfully',
-      data: result
+    // Enqueue ingestion job
+    await ingestionQueue.add("ingest", {
+      batchId: batch.id,
+      filePath: req.file.path,
+      format: detectedFormat,
+      fieldMapping: mapping
+    });
+
+    res.status(202).json({
+      message: "Log ingestion started",
+      batch
     });
   } catch (error) {
-    console.error('[MONITORING] Ingestion error:', error);
+    console.error("[MONITORING] Upload error:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
+/**
+ * List batches
+ */
+exports.listBatches = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, suite_id } = req.query;
+    const offset = (page - 1) * limit;
+    const batches = await getBatchesByUser(req.user.id, parseInt(limit), parseInt(offset), suite_id);
+    res.status(200).json(batches);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get batch status and metadata
+ */
+exports.getBatch = async (req, res) => {
+  try {
+    const { suite_id } = req.query;
+    const batch = await getBatchById(req.params.id, req.user.id, suite_id);
+    if (!batch) return res.status(404).json({ error: "Batch not found or unauthorized" });
+    res.status(200).json(batch);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get computed analytics
+ */
+exports.getAnalytics = async (req, res) => {
+  try {
+    const { suite_id } = req.query;
+    const batch = await getBatchById(req.params.id, req.user.id, suite_id);
+    if (!batch) return res.status(404).json({ error: "Batch not found or unauthorized" });
+
+    const analytics = await getAnalyticsByBatch(req.params.id);
+    if (!analytics || analytics.length === 0) {
+      return res.status(404).json({ error: "Analytics not yet computed for this batch" });
+    }
+    
+    // Format response
+    const formatted = analytics.reduce((acc, curr) => {
+      acc[curr.summary_type] = curr.data;
+      return acc;
+    }, {});
+    
+    res.status(200).json(formatted);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get detected anomalies
+ */
+exports.getAnomalies = async (req, res) => {
+  try {
+    const { suite_id } = req.query;
+    const batch = await getBatchById(req.params.id, req.user.id, suite_id);
+    if (!batch) return res.status(404).json({ error: "Batch not found or unauthorized" });
+
+    const anomalies = await getAnomaliesByBatch(req.params.id);
+    if (!anomalies) {
+        return res.status(404).json({ error: "Anomaly detection not yet complete for this batch" });
+    }
+    res.status(200).json(anomalies);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Webhook ingestion
+ */
 exports.webhookIngest = async (req, res) => {
   try {
-    // Webhooks are usually JSON streams or single events
+    // Auth via API Key is handled by middleware
     const logs = Array.isArray(req.body) ? req.body : [req.body];
+    const { project_id } = req.query; // Active session identification
     
-    // In a real scenario, we might want to skip the file system and go straight to DB
-    // but for consistency with the service, we can normalize here
-    const normalizedLogs = logs.map(log => monitoringService._normalizeLog(log, null, 'webhook'));
+    // For simplicity, we create a pseudo-batch or append to an active one
+    // Here we'll just create a 'streaming' batch if it doesn't exist
+    // Requirements say: "Append records to the active streaming batch for the project"
+    // We'll just process it as a small batch for now.
     
-    await PassiveLog.insertMany(normalizedLogs, { ordered: false });
-
-    res.status(200).json({
-      message: 'Webhook logs processed',
-      count: normalizedLogs.length
+    const batch = await createBatch({
+        userId: req.user_id, // Settled by api key auth middleware
+        suiteId: project_id,
+        filename: "webhook_stream",
+        format: "json",
+        fieldMapping: null
     });
+    
+    await ingestionQueue.add("ingest_direct", {
+        batchId: batch.id,
+        logs,
+        format: "json"
+    });
+
+    res.status(200).json({ message: "Webhook logs received", batchId: batch.id });
   } catch (error) {
-    console.error('[MONITORING] Webhook error:', error);
     res.status(500).json({ error: error.message });
   }
 };
 
-exports.getLogs = async (req, res) => {
+const MonitoringAIService = require("../services/monitoringAIService");
+
+/**
+ * AI Insights Report
+ */
+exports.getAIReport = async (req, res) => {
   try {
-    const { path, method, status, limit = 100, skip = 0 } = req.query;
-    const query = {};
+    const { suite_id } = req.query;
+    const batch = await getBatchById(req.params.id, req.user.id, suite_id);
+    if (!batch) return res.status(404).json({ error: "Batch not found or unauthorized" });
+    
+    if (batch.ai_report) {
+      return res.status(200).json({ report: batch.ai_report });
+    }
 
-    if (path) query.endpointPath = new RegExp(path, 'i');
-    if (method) query.method = method.toUpperCase();
-    if (status) query.statusCode = parseInt(status);
+    const analytics = await getAnalyticsByBatch(req.params.id);
+    const anomalies = await getAnomaliesByBatch(req.params.id);
 
-    const logs = await PassiveLog.find(query)
-      .sort({ timestamp: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit));
+    if (analytics.length === 0) {
+      return res.status(400).json({ error: "Analytics must be computed before generating report" });
+    }
 
-    const total = await PassiveLog.countDocuments(query);
+    const context = {
+      batch: {
+        id: batch.id,
+        filename: batch.filename,
+        total_records: batch.total_records
+      },
+      analytics,
+      anomalies
+    };
 
-    res.status(200).json({
-      total,
-      limit: parseInt(limit),
-      skip: parseInt(skip),
-      data: logs
+    const reportText = await MonitoringAIService.generateInsightsReport(context);
+
+    await updateBatchStatus(batch.id, batch.status, { ai_report: reportText });
+
+    res.status(200).json({ report: reportText });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Generate Tests from anomalies
+ */
+exports.generateTests = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { suite_id } = req.body; // usually expected in body for POST
+    
+    const batch = await getBatchById(id, req.user.id, suite_id);
+    if (!batch) return res.status(404).json({ error: "Batch not found or unauthorized" });
+
+    const anomalies = await getAnomaliesByBatch(id);
+    
+    if (!anomalies || anomalies.length === 0) {
+      return res.status(400).json({ error: "No anomalies found to generate tests from" });
+    }
+
+    const taskId = await MonitoringAIService.triggerTestGeneration(id, anomalies);
+    
+    res.status(202).json({
+      message: "AI test generation triggered",
+      task_id: taskId
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Delete batch
+ */
+exports.deleteBatch = async (req, res) => {
+  try {
+    const { suite_id } = req.query;
+    const result = await deleteBatch(req.params.id, req.user.id, suite_id);
+    if (!result) return res.status(404).json({ error: "Batch not found or unauthorized" });
+    res.status(200).json({ message: "Batch deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
