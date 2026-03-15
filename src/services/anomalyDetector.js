@@ -16,17 +16,53 @@ class AnomalyDetector {
       const analytics = await this._getAnalytics(batchId);
       const trafficSummary = analytics.find(a => a.summary_type === 'endpoint_traffic')?.data || [];
       const latencyStats = analytics.find(a => a.summary_type === 'latency_stats')?.data || [];
+      const statusCodes = analytics.find(a => a.summary_type === 'status_codes')?.data || [];
 
       let anomalyCount = 0;
+
+      // NEW: A. Global Auth/Service Outage Detection
+      const totalRequests = statusCodes.reduce((sum, s) => sum + parseInt(s.count), 0);
+      const outageCodes = statusCodes.filter(s => [401, 503].includes(parseInt(s.status_code)));
+      const outageCount = outageCodes.reduce((sum, s) => sum + parseInt(s.count), 0);
+      const outageRate = totalRequests > 0 ? (outageCount / totalRequests) * 100 : 0;
+
+      if (outageRate > 10) {
+        console.log(`[AnomalyDetector] Global outage detected: ${outageRate.toFixed(2)}% of traffic returned 401/503`);
+        await createAnomaly({
+          batchId,
+          anomalyType: "global_outage",
+          severity: "critical",
+          endpointPath: "*",
+          evidence: { rate: outageRate, codes: outageCodes }
+        });
+        anomalyCount++;
+      }
+
+      // NEW: B. Scraping / Bot Detection (High volume, null user IDs, or 429s)
+      const scrapingIps = await this._detectScraping(batchId);
+      for (const scrap of scrapingIps) {
+        await createAnomaly({
+          batchId,
+          anomalyType: "scraping_attack",
+          severity: "high",
+          endpointPath: scrap.endpoint_path || "*",
+          evidence: { ip: scrap.ip_address, requests: scrap.count, user_id: "null" }
+        });
+        anomalyCount++;
+      }
 
       for (const endpoint of trafficSummary) {
         const { endpoint_path, http_method, error_rate, request_count } = endpoint;
         const latency = latencyStats.find(l => l.endpoint_path === endpoint_path);
 
-        // A. Error Rate Spike
+        console.log(`[AnomalyDetector] Evaluation: ${http_method} ${endpoint_path} | Count: ${request_count} | Error: ${error_rate.toFixed(2)}%`);
+
+        // C. Error Rate Spike
         const historicalErrorRate = await this._getHistoricalMetric(userId, endpoint_path, 'error_rate');
-        const errorThreshold = historicalErrorRate ? historicalErrorRate * 2 : 10; // 2x baseline or 10%
-        if (error_rate > errorThreshold && error_rate > 5) {
+        const errorThreshold = historicalErrorRate !== null ? Math.max(historicalErrorRate * 2, 8) : 8;
+        
+        if (error_rate > errorThreshold && error_rate > 2) {
+          console.log(`[AnomalyDetector] Anomaly: Error Spike on ${endpoint_path} (${error_rate.toFixed(2)}% vs baseline ${historicalErrorRate?.toFixed(2) || '0.00'}%)`);
           await createAnomaly({
             batchId,
             anomalyType: "error_rate_spike",
@@ -37,10 +73,13 @@ class AnomalyDetector {
           anomalyCount++;
         }
 
-        // B. Latency Degradation
+        // D. Latency Degradation
         if (latency) {
           const historicalP95 = await this._getHistoricalMetric(userId, endpoint_path, 'p95');
-          if (historicalP95 && latency.p95 > historicalP95 * 1.5 && latency.p95 > 500) {
+          const latencyThreshold = historicalP95 !== null ? historicalP95 * 1.5 : 1000; // Default 1s if no history
+          
+          if (latency.p95 > latencyThreshold && latency.p95 > 300) {
+            console.log(`[AnomalyDetector] Anomaly: Latency Spike on ${endpoint_path} (${latency.p95.toFixed(2)}ms vs baseline ${historicalP95?.toFixed(2) || 'N/A'}ms)`);
             await createAnomaly({
               batchId,
               anomalyType: "latency_degradation",
@@ -51,27 +90,14 @@ class AnomalyDetector {
             anomalyCount++;
           }
         }
-
-        // C. Unusual 4xx patterns
-        const fatalErrorRate = await this._get4xxRate(batchId, endpoint_path);
-        if (fatalErrorRate > 20) {
-             await createAnomaly({
-                batchId,
-                anomalyType: "unusual_4xx_pattern",
-                severity: "high",
-                endpointPath: endpoint_path,
-                evidence: { rate: fatalErrorRate }
-              });
-              anomalyCount++;
-        }
       }
-
-      // D. Traffic Volume Deviation
-      // (Simplified: Skip for brevity if needed, but requirements ask for it)
 
       // E. Silent Endpoint
       const silentEndpoints = await this._detectSilentEndpoints(userId, batchId);
       for (const path of silentEndpoints) {
+          // Skip the root path and common noise
+          if (path === "/" || path === "/health") continue;
+
           await createAnomaly({
             batchId,
             anomalyType: "silent_endpoint",
@@ -104,34 +130,49 @@ class AnomalyDetector {
   async _getHistoricalMetric(userId, path, metric) {
       // Get avg of last 5 batches for this endpoint
       const res = await query(`
-        SELECT AVG((data->>$2)::float) as avg_val
+        SELECT AVG((elem->>$2)::float) as avg_val
         FROM log_batch_analytics lba
         JOIN log_ingestion_batches lib ON lba.batch_id = lib.id
+        CROSS JOIN LATERAL jsonb_array_elements(lba.data) elem
         WHERE lib.uploaded_by = $1 
         AND lba.summary_type = $3
-        AND EXISTS (SELECT 1 FROM jsonb_array_elements(lba.data) elem WHERE elem->>'endpoint_path' = $4)
+        AND elem->>'endpoint_path' = $4
+        AND lib.status = 'complete'
       `, [userId, metric, metric === 'error_rate' ? 'endpoint_traffic' : 'latency_stats', path]);
       
-      return res.rows[0]?.avg_val || null;
+      const val = res.rows[0]?.avg_val;
+      return val !== null ? parseFloat(val) : null;
   }
 
-  async _get4xxRate(batchId, path) {
+  async _detectScraping(batchId) {
+      // Detect IPs with moderate/high volume and null user IDs or 429s (Threshold lowered to 80)
       const res = await query(`
-        SELECT (COUNT(*) FILTER (WHERE status_code >= 400 AND status_code < 500)::float / COUNT(*)) * 100 as rate
+        SELECT ip_address, endpoint_path, COUNT(*) as count
         FROM log_entries
-        WHERE batch_id = $1 AND endpoint_path = $2
-        GROUP BY endpoint_path
-      `, [batchId, path]);
-      return res.rows[0]?.rate || 0;
+        WHERE batch_id = $1 
+        AND (user_id IS NULL OR user_id = 'null' OR status_code = 429)
+        GROUP BY ip_address, endpoint_path
+        HAVING COUNT(*) > 80
+      `, [batchId]);
+      return res.rows;
   }
 
   async _detectSilentEndpoints(userId, batchId) {
       // Find endpoints that were in previous batches but not this one
+      // Filter out 'legacy' unnormalized paths using regex
       const res = await query(`
-        SELECT DISTINCT endpoint_path
-        FROM log_entries le
-        JOIN log_ingestion_batches lib ON le.batch_id = lib.id
-        WHERE lib.uploaded_by = $1 AND lib.id != $2
+        WITH previous_active_endpoints AS (
+          SELECT endpoint_path, COUNT(*) as total_calls
+          FROM log_entries le
+          JOIN log_ingestion_batches lib ON le.batch_id = lib.id
+          WHERE lib.uploaded_by = $1 AND lib.id != $2
+          AND endpoint_path !~ '[0-9a-f]{8}-[0-9a-f]{4}'
+          AND endpoint_path !~ '[0-9a-f]{32}'
+          AND endpoint_path !~ '/[0-9]{4,}'
+          GROUP BY endpoint_path
+          HAVING COUNT(*) > 20
+        )
+        SELECT endpoint_path FROM previous_active_endpoints
         EXCEPT
         SELECT DISTINCT endpoint_path
         FROM log_entries
