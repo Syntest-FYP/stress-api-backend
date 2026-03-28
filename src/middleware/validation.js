@@ -52,9 +52,11 @@ const schemas = {
   }),
   createTestSuite: Joi.object({
     name: Joi.string().max(100).required(),
-    description: Joi.string().allow("").optional(),
+    description: Joi.string().allow("", null).optional(),
     version: Joi.string().max(20).optional().default("1.0"),
-    base_url: Joi.string().uri().required(),
+    base_url: Joi.string()
+      .uri({ scheme: ["http", "https"] })
+      .required(),
     auth_type: Joi.string()
       .valid("none", "api_key", "oauth2", "jwt")
       .default("none"),

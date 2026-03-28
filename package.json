@@ -6,8 +6,9 @@
   "scripts": {
     "start": "nodemon src/server.js",
     "dev": "nodemon src/server.js",
+    "db:init": "node scripts/run-init-db.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-      "test-jest": "jest"
+    "test-jest": "jest"
   },
   "repository": {
     "type": "git",

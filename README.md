@@ -22,3 +22,13 @@ Load testing automation with AI-driven test generation and analysis. Built with 
 - Node.js (v18+)
 - Docker and Docker Compose
 - OpenAI API Key
+
+### PostgreSQL schema
+
+After `docker compose up -d`, create tables once:
+
+```bash
+npm run db:init
+```
+
+This runs `init-db.sql` (core tables including `test_suites`) plus migrations from `stress-api-ai/migrations/`. **Warning:** `init-db.sql` drops and recreates those tables; do not run on a database you need to keep.

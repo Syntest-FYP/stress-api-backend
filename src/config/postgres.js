@@ -1,28 +1,25 @@
 const { Pool } = require("pg");
 
-// HARDCODED CONFIG FOR TESTING
-// Using port 5433 to avoid conflict with Windows PostgreSQL service on 5432
+// Defaults match stress-api-backend/docker-compose.yml (host maps 5433 -> container 5432)
 const poolConfig = {
-  host: "127.0.0.1",
-  port: 5432, // Changed to 5433 (Docker maps 5433->5432) to avoid Windows PostgreSQL conflict
-  database: "stressdb",
-  user: "stressapisllgv",
-  password: "sllgv20hoptportgresheu", // Original password from docker-compose.yml
-  ssl: false,
+  host: process.env.POSTGRES_HOST || "127.0.0.1",
+  port: parseInt(process.env.POSTGRES_PORT || "5433", 10),
+  database: process.env.POSTGRES_DB || "stressdb",
+  user: process.env.POSTGRES_USER || "stressapisllgv",
+  password: process.env.POSTGRES_PASSWORD || "sllgv20hoptportgresheu",
+  ssl: process.env.POSTGRES_SSL === "true",
 };
 
-// Log connection config (without password) for debugging
-console.log("PostgreSQL Config (HARDCODED FOR TESTING):", {
+console.log("PostgreSQL Config:", {
   host: poolConfig.host,
   port: poolConfig.port,
   database: poolConfig.database,
   user: poolConfig.user,
   hasPassword: !!poolConfig.password,
   passwordLength: poolConfig.password?.length || 0,
-  source: "Hardcoded for testing",
+  source: "env (POSTGRES_*) with docker-compose defaults",
 });
 
-// Show masked password for debugging (first 2 and last 2 chars)
 if (poolConfig.password) {
   const pwd = poolConfig.password;
   const masked =
@@ -34,32 +31,28 @@ if (poolConfig.password) {
   console.log("🔍 Password (masked):", masked, `(length: ${pwd.length})`);
 }
 
-// Create pool with hardcoded config
-// Try multiple approaches: individual parameters (most reliable for special characters)
 let pool;
 
-// APPROACH 1: Use individual parameters (bypasses URL encoding issues)
-console.log("🔧 Attempting connection using individual parameters...");
+console.log("🔧 Creating PostgreSQL pool...");
 pool = new Pool({
   host: poolConfig.host,
   port: poolConfig.port,
   database: poolConfig.database,
   user: poolConfig.user,
-  password: poolConfig.password, // Direct password, no URL encoding
-  ssl: false,
-  // Add connection timeout
-  connectionTimeoutMillis: 5000,
-  // Add idle timeout
+  password: poolConfig.password,
+  ssl: poolConfig.ssl ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: parseInt(
+    process.env.POSTGRES_CONNECTION_TIMEOUT_MS || "15000",
+    10,
+  ),
   idleTimeoutMillis: 30000,
 });
-console.log("✅ Created pool using individual parameters");
+console.log("✅ Created pool");
 
-// Handle pool errors
 pool.on("error", (err) => {
   console.error("Unexpected PostgreSQL pool error:", err);
 });
 
-// Test connection on startup with retry
 let retryCount = 0;
 const maxRetries = 3;
 
@@ -87,7 +80,6 @@ function testConnection() {
         user: poolConfig.user,
         passwordLength: pwd.length,
         passwordMasked: maskedPwd,
-        source: "Hardcoded for testing",
       });
 
       if (retryCount < maxRetries) {
@@ -95,11 +87,9 @@ function testConnection() {
         console.log(`🔄 Retrying connection (${retryCount}/${maxRetries})...`);
         setTimeout(testConnection, 2000);
       } else {
+        console.error("💡 Verify Docker: docker compose up -d");
         console.error(
-          "💡 Verify Docker container is running: docker-compose up -d",
-        );
-        console.error(
-          "💡 Verify password matches Docker container: sllgv20hoptportgresheu",
+          "💡 Host port should be POSTGRES_PORT=5433 (see docker-compose port mapping)",
         );
         console.error(
           "💡 Try: docker exec -it pg psql -U stressapisllgv -d stressdb",
@@ -112,7 +102,6 @@ function testConnection() {
   });
 }
 
-// Start connection test
 testConnection();
 
 async function query(text, params) {
