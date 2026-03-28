@@ -83,13 +83,13 @@ const deleteBatch = async (batchId, userId, suiteId = null) => {
 const bulkInsertLogEntries = async (batchId, entries) => {
   if (entries.length === 0) return;
 
-  // entries is an array of [timestamp, endpoint_path, http_method, status_code, response_time_ms, user_id, ip_address, error_message]
+  // entries is an array of objects with [timestamp, endpoint_path, http_method, status_code, response_time_ms, user_id, ip_address, error_message, endpoint_id]
   const values = [];
   const valuePlaceholders = [];
   
   entries.forEach((entry, i) => {
-    const offset = i * 10;
-    valuePlaceholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10})`);
+    const offset = i * 11;
+    valuePlaceholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11})`);
     values.push(
       batchId,
       entry.timestamp,
@@ -100,12 +100,13 @@ const bulkInsertLogEntries = async (batchId, entries) => {
       entry.user_id || null,
       entry.ip_address || null,
       entry.error_message || null,
+      entry.endpoint_id || null,
       new Date()
     );
   });
 
   const queryText = `
-    INSERT INTO log_entries (batch_id, timestamp, endpoint_path, http_method, status_code, response_time_ms, user_id, ip_address, error_message, created_at)
+    INSERT INTO log_entries (batch_id, timestamp, endpoint_path, http_method, status_code, response_time_ms, user_id, ip_address, error_message, endpoint_id, created_at)
     VALUES ${valuePlaceholders.join(", ")}
   `;
   
@@ -134,21 +135,64 @@ const getAnalyticsByBatch = async (batchId) => {
 /**
  * Anomalies
  */
-const createAnomaly = async ({ batchId, anomalyType, severity, endpointPath, evidence }) => {
+const createAnomaly = async ({ batchId, anomalyType, severity, endpointPath, evidence, endpointId }) => {
   const result = await query(
-    `INSERT INTO log_anomalies (batch_id, anomaly_type, severity, endpoint_path, evidence) 
-     VALUES ($1, $2, $3, $4, $5) 
+    `INSERT INTO log_anomalies (batch_id, anomaly_type, severity, endpoint_path, evidence, endpoint_id) 
+     VALUES ($1, $2, $3, $4, $5, $6) 
      RETURNING *`,
-    [batchId, anomalyType, severity, endpointPath, JSON.stringify(evidence)]
+    [batchId, anomalyType, severity, endpointPath, JSON.stringify(evidence), endpointId || null]
   );
   return result.rows[0];
 };
 
 const getAnomaliesByBatch = async (batchId) => {
   const result = await query(
-    "SELECT * FROM log_anomalies WHERE batch_id = $1 ORDER BY severity",
+    `SELECT * FROM log_anomalies 
+     WHERE batch_id = $1 
+     ORDER BY 
+       CASE severity 
+         WHEN 'critical' THEN 1 
+         WHEN 'high' THEN 2 
+         WHEN 'medium' THEN 3 
+         WHEN 'low' THEN 4 
+         ELSE 5 
+       END ASC, 
+       detected_at DESC`,
     [batchId]
   );
+  return result.rows;
+};
+
+const getLogsByBatch = async (batchId, filters = {}) => {
+  let queryText = "SELECT * FROM log_entries WHERE batch_id = $1";
+  const params = [batchId];
+  let paramCount = 2;
+
+  if (filters.statusCode) {
+    queryText += ` AND status_code = $${paramCount++}`;
+    params.push(filters.statusCode);
+  }
+  if (filters.endpointPath) {
+    queryText += ` AND endpoint_path LIKE $${paramCount++}`;
+    params.push(`%${filters.endpointPath}%`);
+  }
+  if (filters.userId) {
+    queryText += ` AND user_id = $${paramCount++}`;
+    params.push(filters.userId);
+  }
+  if (filters.ipAddress) {
+    queryText += ` AND ip_address = $${paramCount++}`;
+    params.push(filters.ipAddress);
+  }
+  if (filters.startTime && filters.endTime) {
+    queryText += ` AND timestamp BETWEEN $${paramCount++} AND $${paramCount++}`;
+    params.push(filters.startTime, filters.endTime);
+  }
+
+  queryText += ` ORDER BY timestamp DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`;
+  params.push(filters.limit || 100, filters.offset || 0);
+
+  const result = await query(queryText, params);
   return result.rows;
 };
 
@@ -163,4 +207,5 @@ module.exports = {
   getAnalyticsByBatch,
   createAnomaly,
   getAnomaliesByBatch,
+  getLogsByBatch,
 };

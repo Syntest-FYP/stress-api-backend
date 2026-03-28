@@ -7,6 +7,7 @@ const {
   getBatchesByUser, 
   getAnalyticsByBatch, 
   getAnomaliesByBatch, 
+  getLogsByBatch,
   deleteBatch,
   updateBatchStatus
 } = require("../models/monitoring.model");
@@ -144,6 +145,34 @@ exports.getAnomalies = async (req, res) => {
 };
 
 /**
+ * Get raw log entries with filtering
+ */
+exports.getLogs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { suite_id, statusCode, endpointPath, userId, ipAddress, startTime, endTime, limit = 100, offset = 0 } = req.query;
+    
+    const batch = await getBatchById(id, req.user.id, suite_id);
+    if (!batch) return res.status(404).json({ error: "Batch not found or unauthorized" });
+
+    const logs = await getLogsByBatch(id, {
+      statusCode,
+      endpointPath,
+      userId,
+      ipAddress,
+      startTime,
+      endTime,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+    
+    res.status(200).json(logs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
  * Webhook ingestion
  */
 exports.webhookIngest = async (req, res) => {
@@ -236,7 +265,12 @@ exports.generateTests = async (req, res) => {
       return res.status(400).json({ error: "No anomalies found to generate tests from" });
     }
 
-    const taskId = await MonitoringAIService.triggerTestGeneration(id, anomalies);
+    const taskId = await MonitoringAIService.triggerTestGeneration(
+      id, 
+      anomalies, 
+      suite_id || batch.suite_id,
+      req.headers['authorization'] // Pass user auth for spec fetching in Python
+    );
     
     res.status(202).json({
       message: "AI test generation triggered",
@@ -244,6 +278,33 @@ exports.generateTests = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Chat with the Monitoring AI Orchestrator
+ */
+exports.chat = async (req, res) => {
+  try {
+    const { message, suite_id, endpoints = [] } = req.body;
+    
+    if (!message || !suite_id) {
+        return res.status(400).json({ error: "message and suite_id are required" });
+    }
+
+    // Call Python Orchestrator
+    const response = await axios.post(`${PYTHON_BACKEND_URL}/chat/`, {
+      message,
+      suite_id,
+      endpoints,
+      accessToken: req.headers['authorization'],
+      userId: req.user.id
+    });
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error("[MONITORING_CHAT] Error:", error.response?.data || error.message);
+    res.status(error.response?.status || 500).json(error.response?.data || { error: error.message });
   }
 };
 

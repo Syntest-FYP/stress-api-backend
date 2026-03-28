@@ -3,6 +3,7 @@ const Papa = require("papaparse");
 const JSONStream = require("JSONStream");
 const { bulkInsertLogEntries, updateBatchStatus } = require("../models/monitoring.model");
 const { analyticsQueue } = require("../config/queue");
+const EndpointService = require("./endpointService");
 
 class LogIngestionService {
   constructor() {
@@ -59,12 +60,25 @@ class LogIngestionService {
       
       const normalizedMapping = this._getEffectiveMapping(fieldMapping, firstRecord);
 
+      // Fetch endpoints for this suite to link them
+      const batchRes = await require("../config/postgres").query("SELECT suite_id, uploaded_by FROM log_ingestion_batches WHERE id = $1", [batchId]);
+      const { suite_id: suiteId, uploaded_by: userId } = batchRes.rows[0] || {};
+      
+      let suiteEndpoints = [];
+      if (suiteId) {
+        console.log(`[Ingestion] Loading endpoints from MongoDB for suite ${suiteId}`);
+        suiteEndpoints = await EndpointService.getEndpointsBySuite(userId, suiteId);
+        console.log(`[Ingestion] Loaded ${suiteEndpoints.length} endpoints for matching`);
+      }
+
+      const context = { batchId, mapping: normalizedMapping, endpoints: suiteEndpoints };
+
       if (format === "csv") {
-        totalRecords = await this._processCSV(batchId, filePath, normalizedMapping);
+        totalRecords = await this._processCSV(context, filePath);
       } else if (format === "json") {
-        totalRecords = await this._processJSON(batchId, filePath, normalizedMapping);
+        totalRecords = await this._processJSON(context, filePath);
       } else if (format === "ndjson" || format === "elk") {
-        totalRecords = await this._processNDJSON(batchId, filePath, normalizedMapping);
+        totalRecords = await this._processNDJSON(context, filePath);
       } else {
         throw new Error(`Unsupported format: ${format}`);
       }
@@ -137,28 +151,63 @@ class LogIngestionService {
     return mapping;
   }
 
-  _normalizeRecord(raw, mapping) {
+  _normalizeRecord(raw, context) {
+    const { mapping, endpoints } = context;
     let path = raw[mapping.endpoint_path] || "/";
-    path = this._normalizePath(path);
+    const method = (raw[mapping.http_method] || "GET").toUpperCase();
+    
+    // Normalize path for matching
+    const normalizedPath = this._normalizePath(path);
+
+    // Try to find matching endpoint from suite
+    let endpointId = null;
+    if (endpoints && endpoints.length > 0) {
+      const match = endpoints.find(ep => {
+        if (ep.method.toUpperCase() !== method) return false;
+        
+        // Normalize stored path placeholder for comparison (just in case they vary)
+        const storedNormalized = ep.path.replace(/:[a-zA-Z0-9_]+/g, ":id").replace(/\{[^}]+\}/g, ":id");
+        
+        const isMatch = (ep.path === path || ep.path === normalizedPath || storedNormalized === normalizedPath);
+        
+        if (isMatch) {
+            // console.debug(`[Ingestion] Matched ${method} ${path} -> ${ep._id}`);
+            return true;
+        }
+        return false;
+      });
+      
+      if (match) {
+          endpointId = match._id.toString();
+      } else {
+          // Log sampling of failures to avoid flood
+          if (Math.random() < 0.01) {
+              console.log(`[Ingestion] No match for ${method} ${path} (Normalized: ${normalizedPath})`);
+          }
+      }
+    }
 
     return {
       timestamp: raw[mapping.timestamp] ? new Date(raw[mapping.timestamp]) : new Date(),
-      endpoint_path: path,
-      http_method: (raw[mapping.http_method] || "GET").toUpperCase(),
+      endpoint_path: normalizedPath,
+      http_method: method,
       status_code: parseInt(raw[mapping.status_code]) || 200,
       response_time_ms: parseInt(raw[mapping.response_time_ms]) || 0,
       user_id: raw[mapping.user_id] || null,
       ip_address: raw[mapping.ip_address] || null,
       error_message: raw[mapping.error_message] || null,
+      endpoint_id: endpointId
     };
   }
 
   _normalizePath(path) {
-    if (!path || path === "/") return "/";
+    if (!path || path === "/" || path === "") return "/";
 
-    // 0. Strip query parameters
-    let cleanPath = path.split("?")[0];
-    if (!cleanPath || cleanPath === "/") return "/";
+    // 0. Clean the URL
+    // Strip query parameters and trailing slashes
+    let cleanPath = path.split("?")[0].split("#")[0].replace(/\/+$/, "");
+    if (!cleanPath || cleanPath === "") return "/";
+    if (!cleanPath.startsWith("/")) cleanPath = "/" + cleanPath;
 
     // Split path into segments
     const segments = cleanPath.split("/");
@@ -194,9 +243,9 @@ class LogIngestionService {
     return normalizedSegments.join("/");
   }
 
-  async _processCSV(batchId, filePath, mapping) {
+  async _processCSV(context, filePath) {
+    const { batchId } = context;
     let count = 0;
-    let buffer = [];
     
     return new Promise((resolve, reject) => {
       const fileStream = fs.createReadStream(filePath);
@@ -205,7 +254,7 @@ class LogIngestionService {
         skipEmptyLines: true,
         chunk: async (results, parser) => {
             parser.pause();
-            const normalized = results.data.map(row => this._normalizeRecord(row, mapping));
+            const normalized = results.data.map(row => this._normalizeRecord(row, context));
             await bulkInsertLogEntries(batchId, normalized);
             count += normalized.length;
             parser.resume();
@@ -216,7 +265,8 @@ class LogIngestionService {
     });
   }
 
-  async _processJSON(batchId, filePath, mapping) {
+  async _processJSON(context, filePath) {
+    const { batchId } = context;
     let count = 0;
     let buffer = [];
     
@@ -225,7 +275,7 @@ class LogIngestionService {
       const jsonStream = fileStream.pipe(JSONStream.parse("*"));
 
       jsonStream.on("data", async (row) => {
-        buffer.push(this._normalizeRecord(row, mapping));
+        buffer.push(this._normalizeRecord(row, context));
         if (buffer.length >= this.CHUNK_SIZE) {
           jsonStream.pause();
           await bulkInsertLogEntries(batchId, buffer);
@@ -247,7 +297,8 @@ class LogIngestionService {
     });
   }
 
-  async _processNDJSON(batchId, filePath, mapping) {
+  async _processNDJSON(context, filePath) {
+    const { batchId } = context;
     let count = 0;
     let buffer = [];
     
@@ -258,7 +309,7 @@ class LogIngestionService {
       if (!line.trim()) continue;
       try {
         const row = JSON.parse(line);
-        buffer.push(this._normalizeRecord(row, mapping));
+        buffer.push(this._normalizeRecord(row, context));
         
         if (buffer.length >= this.CHUNK_SIZE) {
           await bulkInsertLogEntries(batchId, buffer);

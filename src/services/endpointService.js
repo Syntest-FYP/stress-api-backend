@@ -1,5 +1,6 @@
 const EndpointCollection = require("../models/Endpoint");
 const { normalizeQueryParams } = require("../utils/queryParamNormalizer");
+const { query } = require("../config/postgres");
 
 class EndpointService {
   // Create or update endpoint collection
@@ -40,7 +41,66 @@ class EndpointService {
       }
     );
 
+    if (result) {
+      await this.syncEndpointsToPostgres(user_id, suite_id, result.endpoints);
+    }
+
     return result;
+  }
+
+  // Sync helpers for PostgreSQL
+  static async syncEndpointsToPostgres(user_id, suite_id, endpoints) {
+    try {
+      // For consistency with the collection model, we refresh the suite's endpoints in Postgres
+      // First, get currently listed IDs in this suite to handle deletions if necessary
+      // However, a simpler approach for now is to delete and re-insert or use UPSERT
+      
+      if (!endpoints || endpoints.length === 0) {
+        await query("DELETE FROM api_endpoints WHERE suite_id = $1", [suite_id]);
+        return;
+      }
+
+      // 1. Delete endpoints that are no longer in the MongoDB collection for this suite
+      const currentIds = endpoints.map(ep => ep._id.toString());
+      await query(
+        "DELETE FROM api_endpoints WHERE suite_id = $1 AND id NOT IN (SELECT unnest($2::varchar[]))",
+        [suite_id, currentIds]
+      );
+
+      // 2. Upsert current endpoints
+      for (const ep of endpoints) {
+        await query(
+          `INSERT INTO api_endpoints (id, user_id, suite_id, name, method, path, base_url, headers, query_params, auth_type, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             method = EXCLUDED.method,
+             path = EXCLUDED.path,
+             base_url = EXCLUDED.base_url,
+             headers = EXCLUDED.headers,
+             query_params = EXCLUDED.query_params,
+             auth_type = EXCLUDED.auth_type,
+             is_active = EXCLUDED.is_active,
+             updated_at = NOW()`,
+          [
+            ep._id.toString(),
+            user_id,
+            suite_id,
+            ep.name || null,
+            ep.method,
+            ep.path,
+            ep.base_url || null,
+            JSON.stringify(ep.headers || {}),
+            JSON.stringify(ep.query_params || {}),
+            ep.auth_type || null,
+            ep.is_active !== false
+          ]
+        );
+      }
+      console.log(`[SYNC] Successfully synced ${endpoints.length} endpoints to PostgreSQL for suite ${suite_id}`);
+    } catch (err) {
+      console.error(`[SYNC_ERROR] Failed to sync endpoints to PostgreSQL for suite ${suite_id}:`, err.message);
+    }
   }
 
   // Add single endpoint to collection
@@ -75,6 +135,10 @@ class EndpointService {
         runValidators: true,
       }
     );
+
+    if (result) {
+      await this.syncEndpointsToPostgres(user_id, suite_id, result.endpoints);
+    }
 
     return result;
   }
@@ -124,6 +188,10 @@ class EndpointService {
       { new: true, runValidators: true }
     );
 
+    if (result) {
+      await this.syncEndpointsToPostgres(user_id, suite_id, result.endpoints);
+    }
+
     return result;
   }
 
@@ -139,12 +207,20 @@ class EndpointService {
       { new: true }
     );
 
+    if (result) {
+      await this.syncEndpointsToPostgres(user_id, suite_id, result.endpoints);
+    }
+
     return result;
   }
 
   // Delete entire endpoint collection
   static async deleteEndpointCollection(user_id, suite_id) {
-    return await EndpointCollection.findOneAndDelete({ user_id, suite_id });
+    const result = await EndpointCollection.findOneAndDelete({ user_id, suite_id });
+    if (result) {
+      await query("DELETE FROM api_endpoints WHERE suite_id = $1", [suite_id]);
+    }
+    return result;
   }
 
   // Get single endpoint by ID (searches across all collections for user)

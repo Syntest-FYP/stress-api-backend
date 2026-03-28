@@ -42,12 +42,13 @@ class AnalyticsEngine {
       SELECT 
         endpoint_path, 
         http_method, 
+        endpoint_id,
         COUNT(*) as request_count,
         COUNT(*) FILTER (WHERE status_code >= 400) as error_count,
         (COUNT(*) FILTER (WHERE status_code >= 400)::float / COUNT(*)) * 100 as error_rate
       FROM log_entries
       WHERE batch_id = $1
-      GROUP BY endpoint_path, http_method
+      GROUP BY endpoint_path, http_method, endpoint_id
       ORDER BY request_count DESC
     `, [batchId]);
     return res.rows;
@@ -55,7 +56,10 @@ class AnalyticsEngine {
 
   async _computeStatusCodeBreakdown(batchId) {
     const res = await query(`
-      SELECT status_code, COUNT(*) as count
+      SELECT 
+        status_code, 
+        COUNT(*) as count,
+        COUNT(DISTINCT endpoint_path) as unique_endpoints
       FROM log_entries
       WHERE batch_id = $1
       GROUP BY status_code
@@ -68,13 +72,14 @@ class AnalyticsEngine {
     const res = await query(`
       SELECT 
         endpoint_path,
+        endpoint_id,
         PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY response_time_ms) as p50,
         PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY response_time_ms) as p90,
         PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time_ms) as p95,
         PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY response_time_ms) as p99
       FROM log_entries
       WHERE batch_id = $1
-      GROUP BY endpoint_path
+      GROUP BY endpoint_path, endpoint_id
     `, [batchId]);
     return res.rows;
   }
