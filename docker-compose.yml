@@ -20,6 +20,14 @@ services:
       - "6380:6379"  # Changed to 6380 to avoid conflict with local Redis service on 6379
     command: redis-server --requirepass sllgVD@
 
+  k6:
+    image: grafana/k6:latest
+    container_name: k6_runner
+    volumes:
+      - k6_scripts:/scripts
+      - k6_results:/results
+    entrypoint: ["tail", "-f", "/dev/null"]
+
   # n8n:
   #   image: n8nio/n8n
   #   container_name: n8n
@@ -40,3 +48,5 @@ services:
 
 volumes:
   pgdata:
+  k6_scripts:
+  k6_results:

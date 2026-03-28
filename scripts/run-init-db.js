@@ -60,6 +60,16 @@ async function main() {
 
   await runSqlFile("Core schema", path.join(root, "init-db.sql"));
 
+  const aiChatSql = path.join(root, "migrations", "add_ai_chat_tables.sql");
+  if (fs.existsSync(aiChatSql)) {
+    await runSqlFile("AI chat tables (conversations, messages, …)", aiChatSql);
+  }
+
+  const loadTestSql = path.join(root, "migrations", "add_load_test_profiles.sql");
+  if (fs.existsSync(loadTestSql)) {
+    await runSqlFile("Load test profiles", loadTestSql);
+  }
+
   const securitySql = path.join(aiRoot, "migrations", "add_security_scan_tables.sql");
   if (fs.existsSync(securitySql)) {
     await runSqlFile("Security scan tables", securitySql);

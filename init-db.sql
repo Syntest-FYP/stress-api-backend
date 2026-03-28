@@ -13,6 +13,13 @@ DROP TABLE IF EXISTS n8n_workflows CASCADE;
 DROP TABLE IF EXISTS agent_logs CASCADE;
 DROP TABLE IF EXISTS api_usage CASCADE;
 DROP TABLE IF EXISTS tests CASCADE;
+DROP TABLE IF EXISTS load_test_profiles CASCADE;
+-- stress-api-ai SQLAlchemy ORM (chat / agent persistence)
+DROP TABLE IF EXISTS agent_actions CASCADE;
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS conversations CASCADE;
+DROP TABLE IF EXISTS analyzed_specs CASCADE;
+DROP TABLE IF EXISTS test_cases CASCADE;
 DROP TABLE IF EXISTS test_suites CASCADE;
 
 CREATE TABLE test_suites (
@@ -187,6 +194,23 @@ CREATE TABLE spec_analyses (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE load_test_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  suite_id UUID NOT NULL REFERENCES test_suites(id) ON DELETE CASCADE,
+  conversation_id VARCHAR(100),
+  profile_type VARCHAR(20) NOT NULL DEFAULT 'ramp_up',
+  max_vus INTEGER DEFAULT 100,
+  profile_config JSONB,
+  k6_script TEXT,
+  result_data JSONB,
+  status VARCHAR(30) DEFAULT 'pending',
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  finished_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE api_usage (
   id SERIAL PRIMARY KEY,
   user_id UUID,
@@ -197,6 +221,48 @@ CREATE TABLE api_usage (
   ip_address INET,
   user_agent TEXT,
   created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tables used by stress-api-ai (app/models/models.py) — must match SQLAlchemy models
+CREATE TABLE conversations (
+  id VARCHAR(255) PRIMARY KEY,
+  user_id VARCHAR(255) NOT NULL,
+  suite_id VARCHAR(255),
+  title VARCHAR(500),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE messages (
+  id VARCHAR(255) PRIMARY KEY,
+  conv_id VARCHAR(255) NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  role VARCHAR(50) NOT NULL,
+  content TEXT NOT NULL,
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE agent_actions (
+  id VARCHAR(255) PRIMARY KEY,
+  msg_id VARCHAR(255) NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  tool_name VARCHAR(255) NOT NULL,
+  input JSONB,
+  output JSONB,
+  status VARCHAR(50) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE analyzed_specs (
+  id VARCHAR(255) PRIMARY KEY,
+  spec_data JSONB NOT NULL,
+  analysis_result JSONB,
+  analyzed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE test_cases (
+  id VARCHAR(255) PRIMARY KEY,
+  endpoint_id VARCHAR(255),
+  test_data JSONB NOT NULL,
+  created_by_agent BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_tests_user_id ON tests(user_id);
@@ -222,3 +288,10 @@ CREATE INDEX idx_endpoints_user_id ON api_endpoints(user_id);
 CREATE INDEX idx_endpoints_suite_id ON api_endpoints(suite_id);
 CREATE INDEX idx_scenarios_endpoint_id ON test_scenarios(endpoint_id);
 CREATE INDEX idx_env_suite_id ON environments(suite_id);
+CREATE INDEX idx_load_test_profiles_user_id ON load_test_profiles(user_id);
+CREATE INDEX idx_load_test_profiles_suite_id ON load_test_profiles(suite_id);
+CREATE INDEX idx_load_test_profiles_conversation_id ON load_test_profiles(conversation_id);
+CREATE INDEX idx_load_test_profiles_status ON load_test_profiles(status);
+CREATE INDEX idx_conversations_suite_id ON conversations(suite_id);
+CREATE INDEX idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX idx_messages_conv_id ON messages(conv_id);

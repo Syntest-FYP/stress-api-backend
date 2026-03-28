@@ -21,6 +21,7 @@ const categoriesRoutes = require("./routes/categories.routes");
 const chatRoutes = require("./routes/chat.routes");
 const securityScanRoutes = require("./routes/securityScan.routes");
 const monitoringRoutes = require("./routes/monitoring.routes");
+const loadtestRoutes = require("./routes/loadtest.routes");
 
 dotenv.config();
 
@@ -128,6 +129,7 @@ app.use("/api/categories", categoriesRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/security-scan", securityScanRoutes);
 app.use("/api/monitoring", monitoringRoutes);
+app.use("/api/load-test", loadtestRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
