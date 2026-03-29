@@ -3,6 +3,17 @@ const yaml = require("js-yaml");
 const SwaggerParser = require("swagger-parser");
 const swagger2openapi = require("swagger2openapi");
 
+const OPENAPI_HTTP_METHODS = new Set([
+  "get",
+  "put",
+  "post",
+  "delete",
+  "options",
+  "head",
+  "patch",
+  "trace",
+]);
+
 /**
  * Parses a Swagger/OpenAPI (3.0.x or 3.1.x) file and extracts endpoints
  * @param {string} filePath - Path to the Swagger/OpenAPI file
@@ -45,6 +56,7 @@ async function parseSwaggerFile(filePath) {
     for (const [pathKey, methods] of Object.entries(paths)) {
       for (const [method, details] of Object.entries(methods)) {
         if (typeof details !== "object") continue;
+        if (!OPENAPI_HTTP_METHODS.has(method.toLowerCase())) continue;
 
         endpoints.push({
           path: pathKey,

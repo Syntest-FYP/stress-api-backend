@@ -191,6 +191,18 @@ function downgradeOpenApi31To30(spec) {
   return converted;
 }
 
+/** OpenAPI path-item fields like `parameters`, `servers`, `summary` are not HTTP verbs — skip them */
+const OPENAPI_HTTP_METHODS = new Set([
+  "get",
+  "put",
+  "post",
+  "delete",
+  "options",
+  "head",
+  "patch",
+  "trace",
+]);
+
 /**
  * Normalize OpenAPI/Swagger paths to a common structure
  */
@@ -200,6 +212,7 @@ function normalizeOpenApi(api) {
   for (const [path, methods] of Object.entries(paths)) {
     for (const [method, details] of Object.entries(methods)) {
       if (typeof details !== "object") continue;
+      if (!OPENAPI_HTTP_METHODS.has(method.toLowerCase())) continue;
       endpoints.push({
         path,
         method: method.toUpperCase(),

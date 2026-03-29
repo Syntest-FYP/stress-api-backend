@@ -149,23 +149,86 @@ exports.suggestSla = async (req, res) => {
   }
 };
 
-exports.getLoadTestHistory = async (req, res) => {
+/** Previous completed run (second most recent) for regression comparison after the latest result is saved. */
+exports.getLatestBaseline = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
     const { suiteId } = req.params;
 
     const result = await query(
-      `SELECT * FROM load_test_profiles WHERE user_id = $1 AND suite_id = $2 ORDER BY created_at DESC LIMIT 20`,
-      [userId, suiteId]
+      `SELECT result_data, finished_at, conversation_id FROM load_test_profiles
+       WHERE suite_id = $1 AND user_id = $2 AND status = 'completed' AND result_data IS NOT NULL
+       ORDER BY COALESCE(finished_at, created_at) DESC NULLS LAST
+       OFFSET 1 LIMIT 1`,
+      [suiteId, userId]
     );
 
-    return res.status(200).json({ success: true, data: result.rows });
+    if (!result.rows.length) {
+      return res.status(200).json({ success: true, data: null });
+    }
+
+    return res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    if (missingLoadTestProfilesTable(error)) {
+      return res.status(200).json({ success: true, data: null });
+    }
+    console.error("[LoadTest] Baseline fetch error:", error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getLoadTestHistory = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { suiteId } = req.params;
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    let limit = parseInt(req.query.limit, 10);
+    if (!Number.isFinite(limit) || limit < 1) {
+      limit = 20;
+    }
+    limit = Math.min(100, Math.max(1, limit));
+    const offset = (page - 1) * limit;
+    const runKey = req.query.run ? String(req.query.run).trim() : "";
+
+    const countResult = await query(
+      `SELECT COUNT(*)::int AS c FROM load_test_profiles WHERE user_id = $1 AND suite_id = $2`,
+      [userId, suiteId]
+    );
+    const total = countResult.rows[0]?.c ?? 0;
+    const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+
+    const result = await query(
+      `SELECT * FROM load_test_profiles WHERE user_id = $1 AND suite_id = $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4`,
+      [userId, suiteId, limit, offset]
+    );
+
+    let matchedRun = null;
+    if (runKey) {
+      const one = await query(
+        `SELECT * FROM load_test_profiles WHERE user_id = $1 AND suite_id = $2 AND (id::text = $3 OR conversation_id = $3) LIMIT 1`,
+        [userId, suiteId, runKey]
+      );
+      if (one.rows[0]) matchedRun = one.rows[0];
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: result.rows,
+      pagination: { total, page, limit, totalPages },
+      matchedRun,
+    });
   } catch (error) {
     if (missingLoadTestProfilesTable(error)) {
       console.warn(
         "[LoadTest] Table load_test_profiles missing — run: npm run db:load-test (or npm run db:init)"
       );
-      return res.status(200).json({ success: true, data: [] });
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: { total: 0, page: 1, limit: 20, totalPages: 1 },
+        matchedRun: null,
+      });
     }
     console.error("[LoadTest] History fetch error:", error.message);
     return res.status(500).json({ success: false, message: error.message });
