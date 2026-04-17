@@ -12,8 +12,13 @@ async function getGeneratedTestResultsByConversationId(conversation_id, user_id)
     return resultModel.getGeneratedTestResultsByConversationId(conversation_id, user_id);
 }
 
+async function deleteGeneratedTestResults(ids, user_id) {
+  return resultModel.deleteGeneratedTestResults(ids, user_id);
+}
+
 module.exports = {
   createGeneratedTestResult,
   getGeneratedTestResultsBySuite,
   getGeneratedTestResultsByConversationId,
+  deleteGeneratedTestResults,
 };

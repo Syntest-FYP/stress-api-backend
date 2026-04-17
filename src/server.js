@@ -1,6 +1,7 @@
 const app = require("./app");
 const { connectDB } = require("./config/mongodb");
 require("dotenv").config();
+require("./workers/monitoring.worker"); // Initialize monitoring worker
 
 const PORT = process.env.PORT || 3000;
 

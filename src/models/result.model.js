@@ -6,13 +6,14 @@ async function createGeneratedTestResult(data) {
     suite_id,
     conversation_id,
     test_case_name,
+    endpoint_id, // Add this
     method,
     path,
     status,
     response_status_code,
     response_body,
     error_message,
-    execution_timestamp, // Add this to destructuring
+    execution_timestamp,
   } = data;
 
   // Handle response_body to ensure it's JSONB compatible or null
@@ -22,21 +23,22 @@ async function createGeneratedTestResult(data) {
 
   const result = await query(
     `INSERT INTO generated_test_results
-    (user_id, suite_id, conversation_id, test_case_name, method, path, status, response_status_code, response_body, error_message, execution_timestamp)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    (user_id, suite_id, conversation_id, test_case_name, endpoint_id, method, path, status, response_status_code, response_body, error_message, execution_timestamp)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *`,
     [
       user_id,
       suite_id,
       conversation_id,
       test_case_name,
+      endpoint_id || null, // Include endpoint_id
       method,
       path,
       status,
       response_status_code,
-      formatted_response_body, // Use formatted_response_body
-      formatted_error_message, // Use formatted_error_message
-      execution_timestamp || new Date().toISOString(), // Use provided timestamp or current
+      formatted_response_body,
+      formatted_error_message,
+      execution_timestamp || new Date().toISOString(),
     ]
   );
   return result.rows[0];
@@ -58,8 +60,18 @@ async function getGeneratedTestResultsByConversationId(conversation_id, user_id)
   return result.rows;
 }
 
+async function deleteGeneratedTestResults(ids, user_id) {
+  // Use ANY() for safe array matching in postgres
+  const result = await query(
+    `DELETE FROM generated_test_results WHERE id = ANY($1::uuid[]) AND user_id = $2 RETURNING id`,
+    [ids, user_id]
+  );
+  return result.rows;
+}
+
 module.exports = {
   createGeneratedTestResult,
   getGeneratedTestResultsBySuite,
   getGeneratedTestResultsByConversationId,
+  deleteGeneratedTestResults,
 }; 
