@@ -20,6 +20,7 @@ const specRoutes = require("./routes/spec.routes");
 const categoriesRoutes = require("./routes/categories.routes");
 const chatRoutes = require("./routes/chat.routes");
 const securityRoutes = require("./routes/security.routes");
+const monitoringRoutes = require("./routes/monitoring.routes");
 
 dotenv.config();
 
@@ -111,6 +112,7 @@ app.use("/api/spec", specRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/security", securityRoutes);
+app.use("/api/monitoring", monitoringRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

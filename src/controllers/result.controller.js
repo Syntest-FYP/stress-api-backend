@@ -95,4 +95,22 @@ exports.getGeneratedTestResultsByConversationId = async (req, res) => {
       console.error("Error fetching generated test results by conversation ID:", error);
       res.status(500).json({ error: "Failed to fetch generated test results" });
     }
-  }; 
+};
+
+// DELETE /api/results/generated/bulk
+exports.deleteGeneratedTestResults = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Missing or invalid 'ids' array in request body" });
+    }
+    
+    const deletedRows = await resultService.deleteGeneratedTestResults(ids, user_id);
+    res.json({ message: "Successfully deleted test results", deletedCount: deletedRows.length, deletedIds: deletedRows.map(r => r.id) });
+  } catch (error) {
+    console.error("Error deleting generated test results:", error);
+    res.status(500).json({ error: "Failed to delete generated test results" });
+  }
+};

@@ -8,5 +8,6 @@ router.use(verifyAuth);
 router.post("/", resultController.createGeneratedTestResult);
 router.get("/suite/:suiteId", resultController.getGeneratedTestResultsBySuite);
 router.get("/conversation/:conversationId", resultController.getGeneratedTestResultsByConversationId);
+router.delete("/generated/bulk", resultController.deleteGeneratedTestResults);
 
-module.exports = router; 
+module.exports = router;
