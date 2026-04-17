@@ -2,7 +2,7 @@ const axios = require("axios");
 const EndpointCollection = require("../models/Endpoint");
 const { getSpecAnalysisBySuite } = require("../models/spec.model");
 const GeneratedTest = require("../models/generated_test.model");
-const { getGeneratedTestResultsBySuite } = require("../models/result.model"); // Import getGeneratedTestResultsBySuite
+const { getGeneratedTestResultsBySuite, createGeneratedTestResult } = require("../models/result.model");
 const { publishA2AMessage } = require("../utils/redisPublisher"); // Import Redis publisher
 
 // Configuration
@@ -204,6 +204,7 @@ const generateTestsForModule = async (req, res) => {
         method: ep.method,
         path: ep.path,
         base_url: ep.base_url,
+        endpoint_id: ep._id || ep.id,
         headers: ep.headers || {},
         query_params: ep.query_params || {},
         auth_type: ep.auth_type,
@@ -251,6 +252,7 @@ const generateTestsForModule = async (req, res) => {
           code_context: code_context || null,
           data_providers: data_providers || null,
           entity_relationships: entity_relationships || null,
+          endpoints: transformedEndpoints,
         },
         tests: response.data?.test_cases || response.data?.tests || null,
         raw_response: response.data || null,
@@ -359,6 +361,7 @@ const generateAllModules = async (req, res) => {
         method: ep.method,
         path: ep.path,
         base_url: ep.base_url,
+        endpoint_id: ep._id || ep.id,
         headers: ep.headers || {},
         query_params: ep.query_params || {},
         auth_type: ep.auth_type,
@@ -381,18 +384,31 @@ const generateAllModules = async (req, res) => {
       entity_relationships: entity_relationships || null,
     };
 
-    // Call Python backend all-endpoints endpoint
+    // Call Python backend generate-all endpoint which preserves dependencies by grouping
     const response = await axios.post(
-      `${PYTHON_BACKEND_URL}/static/all-endpoints`,
+      `${PYTHON_BACKEND_URL}/static/generate-all?tests_per_module=${test_count}`,
       requestBody,
       {
         headers: { "Content-Type": "application/json" },
-        timeout: 180000, // 3 minute timeout
+        timeout: 600000, // 10 minute timeout for LLM generation across all modules
       }
     );
 
     // Persist generated tests
+    // Debug: log what Python returned
+    const pyResponseKeys = Object.keys(response.data || {});
+    const moduleTests = response.data?.test_cases_by_module;
+    const flattenedTests = moduleTests ? Object.values(moduleTests).flat() : [];
+    console.log(`[DEBUG] Python response keys: ${pyResponseKeys.join(', ')}`);
+    console.log(`[DEBUG] test_cases_by_module has ${moduleTests ? Object.keys(moduleTests).length : 0} modules, ${flattenedTests.length} total tests`);
+
     try {
+      const testsToSave = response.data?.test_cases 
+          || response.data?.tests 
+          || (flattenedTests.length > 0 ? flattenedTests : null)
+          || null;
+      console.log(`[DEBUG] Saving ${testsToSave ? testsToSave.length : 0} tests to MongoDB`);
+
       const generatedTestsDoc = await GeneratedTest.create({
         user_id: userId.toString(),
         suite_id: suiteId,
@@ -403,8 +419,9 @@ const generateAllModules = async (req, res) => {
           code_context: code_context || null,
           data_providers: data_providers || null,
           entity_relationships: entity_relationships || null,
+          endpoints: transformedEndpoints,
         },
-        tests: response.data?.test_cases || response.data?.tests || null,
+        tests: testsToSave,
         raw_response: response.data || null,
       });
       // Publish A2A message for generated tests
@@ -421,10 +438,40 @@ const generateAllModules = async (req, res) => {
       );
     } catch (persistErr) {
       console.error(
-        "[WARN] Failed to persist generated all-endpoints tests or publish A2A message:",
+        "[WARN] Failed to persist generated all-endpoints tests to MongoDB or publish A2A message:",
         persistErr.message
       );
     }
+
+    // Also persist each test case into PostgreSQL (this is what the frontend reads)
+    const allTestCases = response.data?.test_cases
+      || response.data?.tests
+      || (response.data?.test_cases_by_module ? Object.values(response.data.test_cases_by_module).flat() : [])
+      || [];
+
+    let pgInsertCount = 0;
+    for (const tc of allTestCases) {
+      try {
+        await createGeneratedTestResult({
+          user_id: userId.toString(),
+          suite_id: suiteId,
+          conversation_id: suiteId, // Use suiteId as conversation_id
+          test_case_name: tc.name || `${(tc.request?.method || 'TEST').toUpperCase()} ${tc.request?.path || '/'}`,
+          endpoint_id: tc.endpoint_id || null,
+          method: tc.request?.method || tc.method || '',
+          path: tc.request?.path || tc.path || '',
+          status: 'pending',
+          response_status_code: null,
+          response_body: null,
+          error_message: null,
+          execution_timestamp: new Date().toISOString(),
+        });
+        pgInsertCount++;
+      } catch (pgErr) {
+        console.error(`[WARN] Failed to insert test "${tc.name}" into PostgreSQL:`, pgErr.message);
+      }
+    }
+    console.log(`[INFO] Inserted ${pgInsertCount}/${allTestCases.length} test cases into PostgreSQL`);
 
     return res.status(200).json({
       success: true,
@@ -644,6 +691,7 @@ const analyzeContextQuality = async (req, res) => {
         method: ep.method,
         path: ep.path,
         base_url: ep.base_url,
+        endpoint_id: ep._id || ep.id,
         headers: ep.headers || {},
         query_params: ep.query_params || {},
         auth_type: ep.auth_type,

@@ -13,7 +13,11 @@ const {
 } = require("../models/monitoring.model");
 const { ingestionQueue } = require("../config/queue");
 const LogIngestionService = require("../services/logIngestionService");
-
+const monitoringModel = require("../models/monitoring.model");
+const environmentModel = require("../models/environment.model");
+const GeneratedTest = require("../models/generated_test.model");
+const { monitoringQueue } = require("../config/bullmq");
+const suitesService = require("../services/suitesService");
 const PYTHON_BACKEND_URL =
   process.env.AI_BACKEND_URL || "http://localhost:8000";
 
@@ -29,7 +33,11 @@ function normalizeAIReport(reportValue) {
   }
 
   if (typeof reportValue !== "string") {
-    return { report: { raw_text: String(reportValue) }, isValid: true, isFailurePlaceholder: false };
+    return {
+      report: { raw_text: String(reportValue) },
+      isValid: true,
+      isFailurePlaceholder: false,
+    };
   }
 
   const trimmed = reportValue.trim();
@@ -285,7 +293,9 @@ const MonitoringAIService = require("../services/monitoringAIService");
 function parseWindowHours(message) {
   const text = String(message || "");
   // Common phrasings: "last 24 hours", "past 7 days", "last day", "last week"
-  const hoursMatch = text.match(/\b(?:last|past)\s+(\d+)\s*(hour|hours|hr|hrs)\b/i);
+  const hoursMatch = text.match(
+    /\b(?:last|past)\s+(\d+)\s*(hour|hours|hr|hrs)\b/i,
+  );
   if (hoursMatch) return Math.max(1, Number(hoursMatch[1]));
 
   const daysMatch = text.match(/\b(?:last|past)\s+(\d+)\s*(day|days)\b/i);
@@ -303,7 +313,9 @@ function isTopFailingEndpointsQuestion(message) {
   const mentionsFailing = /fail|failure|error|5xx|4xx|broken|down/.test(text);
   const mentionsTop = /most|top|worst|highest/.test(text);
   const mentionsWindow = /last|past|24\s*hour|day|week/.test(text);
-  return mentionsEndpoints && mentionsFailing && (mentionsTop || mentionsWindow);
+  return (
+    mentionsEndpoints && mentionsFailing && (mentionsTop || mentionsWindow)
+  );
 }
 
 function inferFailureThreshold(message) {
@@ -335,18 +347,22 @@ function formatTopFailingMarkdown({ rows, hours, failureStatusMin }) {
     `|---:|---|---:|---:|---:|---|\n`;
 
   const lines = rows.map((r, idx) => {
-    const endpoint = `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
+    const endpoint =
+      `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
     const failures = Number(r.failures_selected || 0);
     const total = Number(r.total_requests || 0);
-    const rate = r.selected_failure_rate_pct !== null && r.selected_failure_rate_pct !== undefined
-      ? `${Number(r.selected_failure_rate_pct).toFixed(2)}%`
+    const rate =
+      r.selected_failure_rate_pct !== null &&
+      r.selected_failure_rate_pct !== undefined
+        ? `${Number(r.selected_failure_rate_pct).toFixed(2)}%`
+        : "n/a";
+    const lastSeen = r.last_seen
+      ? new Date(r.last_seen).toLocaleString()
       : "n/a";
-    const lastSeen = r.last_seen ? new Date(r.last_seen).toLocaleString() : "n/a";
     return `| ${idx + 1} | ${endpoint} | ${failures} | ${total} | ${rate} | ${lastSeen} |`;
   });
 
-  const footnote =
-    `\n\nIf you want, ask: **"show me the last 20 failures for #1"** or **"break down failures by status code for /checkout"**.`;
+  const footnote = `\n\nIf you want, ask: **"show me the last 20 failures for #1"** or **"break down failures by status code for /checkout"**.`;
 
   return header + lines.join("\n") + footnote;
 }
@@ -363,13 +379,28 @@ function formatLatencyWorstMarkdown({ rows, hours }) {
     `|---:|---|---:|---:|---:|---:|---:|---|\n`;
 
   const lines = rows.map((r, idx) => {
-    const endpoint = `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
+    const endpoint =
+      `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
     const reqs = Number(r.total_requests || 0);
-    const avg = r.avg_ms !== null && r.avg_ms !== undefined ? `${Number(r.avg_ms).toFixed(2)}ms` : "n/a";
-    const p95 = r.p95_ms !== null && r.p95_ms !== undefined ? `${Number(r.p95_ms).toFixed(0)}ms` : "n/a";
-    const p99 = r.p99_ms !== null && r.p99_ms !== undefined ? `${Number(r.p99_ms).toFixed(0)}ms` : "n/a";
-    const max = r.max_ms !== null && r.max_ms !== undefined ? `${Number(r.max_ms)}ms` : "n/a";
-    const lastSeen = r.last_seen ? new Date(r.last_seen).toLocaleString() : "n/a";
+    const avg =
+      r.avg_ms !== null && r.avg_ms !== undefined
+        ? `${Number(r.avg_ms).toFixed(2)}ms`
+        : "n/a";
+    const p95 =
+      r.p95_ms !== null && r.p95_ms !== undefined
+        ? `${Number(r.p95_ms).toFixed(0)}ms`
+        : "n/a";
+    const p99 =
+      r.p99_ms !== null && r.p99_ms !== undefined
+        ? `${Number(r.p99_ms).toFixed(0)}ms`
+        : "n/a";
+    const max =
+      r.max_ms !== null && r.max_ms !== undefined
+        ? `${Number(r.max_ms)}ms`
+        : "n/a";
+    const lastSeen = r.last_seen
+      ? new Date(r.last_seen).toLocaleString()
+      : "n/a";
     return `| ${idx + 1} | ${endpoint} | ${reqs} | ${avg} | ${p95} | ${p99} | ${max} | ${lastSeen} |`;
   });
 
@@ -394,22 +425,35 @@ function extractPathFromQuestion(message) {
 
 function isLatencyWorstQuestion(message) {
   const text = String(message || "").toLowerCase();
-  return /latency|slow|slowest|p95|p99|response time/.test(text) && /worst|highest|top|most/.test(text);
+  return (
+    /latency|slow|slowest|p95|p99|response time/.test(text) &&
+    /worst|highest|top|most/.test(text)
+  );
 }
 
 function isStatusBreakdownQuestion(message) {
   const text = String(message || "").toLowerCase();
-  return /(status|status code|codes|breakdown|distribution)/.test(text) && /(\/|endpoint|path|route|checkout)/.test(text);
+  return (
+    /(status|status code|codes|breakdown|distribution)/.test(text) &&
+    /(\/|endpoint|path|route|checkout)/.test(text)
+  );
 }
 
 function isHealthQuestion(message) {
   const text = String(message || "").toLowerCase();
-  return /(healthy|health|ok|okay|down|broken|working)/.test(text) && /(checkout|workflow|endpoint|path|route|api|\/)/.test(text);
+  return (
+    /(healthy|health|ok|okay|down|broken|working)/.test(text) &&
+    /(checkout|workflow|endpoint|path|route|api|\/)/.test(text)
+  );
 }
 
 function isSpikeAtTimeQuestion(message) {
   const text = String(message || "").toLowerCase();
-  return /(spike|surge|jump)/.test(text) && /(before|leading up|prior)/.test(text) && /\b\d{1,2}\s*(am|pm)\b/.test(text);
+  return (
+    /(spike|surge|jump)/.test(text) &&
+    /(before|leading up|prior)/.test(text) &&
+    /\b\d{1,2}\s*(am|pm)\b/.test(text)
+  );
 }
 
 function parseTimeOfDayToLatestDate(message) {
@@ -444,10 +488,13 @@ function formatStatusBreakdownMarkdown({ rows, path, hours }) {
     `|---|---:|---:|---|\n`;
 
   const lines = rows.map((r) => {
-    const endpoint = `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
+    const endpoint =
+      `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
     const status = Number(r.status_code);
     const count = Number(r.count || 0);
-    const lastSeen = r.last_seen ? new Date(r.last_seen).toLocaleString() : "n/a";
+    const lastSeen = r.last_seen
+      ? new Date(r.last_seen).toLocaleString()
+      : "n/a";
     return `| ${endpoint} | ${status} | ${count} | ${lastSeen} |`;
   });
 
@@ -459,16 +506,28 @@ function formatHealthMarkdown({ healthRow, path, minutes }) {
     return `No recent traffic for \`${path}\` in the last ${minutes} minutes.`;
   }
 
-  const endpoint = `\`${String(healthRow.http_method || "").toUpperCase()} ${healthRow.endpoint_path}\``.trim();
+  const endpoint =
+    `\`${String(healthRow.http_method || "").toUpperCase()} ${healthRow.endpoint_path}\``.trim();
   const total = Number(healthRow.total_requests || 0);
   const errRate =
     healthRow.error_rate_pct !== null && healthRow.error_rate_pct !== undefined
       ? `${Number(healthRow.error_rate_pct).toFixed(2)}%`
       : "n/a";
-  const p95 = healthRow.p95_ms !== null && healthRow.p95_ms !== undefined ? `${Number(healthRow.p95_ms).toFixed(0)}ms` : "n/a";
-  const p99 = healthRow.p99_ms !== null && healthRow.p99_ms !== undefined ? `${Number(healthRow.p99_ms).toFixed(0)}ms` : "n/a";
-  const avg = healthRow.avg_ms !== null && healthRow.avg_ms !== undefined ? `${Number(healthRow.avg_ms).toFixed(2)}ms` : "n/a";
-  const lastSeen = healthRow.last_seen ? new Date(healthRow.last_seen).toLocaleString() : "n/a";
+  const p95 =
+    healthRow.p95_ms !== null && healthRow.p95_ms !== undefined
+      ? `${Number(healthRow.p95_ms).toFixed(0)}ms`
+      : "n/a";
+  const p99 =
+    healthRow.p99_ms !== null && healthRow.p99_ms !== undefined
+      ? `${Number(healthRow.p99_ms).toFixed(0)}ms`
+      : "n/a";
+  const avg =
+    healthRow.avg_ms !== null && healthRow.avg_ms !== undefined
+      ? `${Number(healthRow.avg_ms).toFixed(2)}ms`
+      : "n/a";
+  const lastSeen = healthRow.last_seen
+    ? new Date(healthRow.last_seen).toLocaleString()
+    : "n/a";
 
   const isHealthy = total > 0 && Number(healthRow.error_rate_pct || 0) < 5;
 
@@ -488,10 +547,12 @@ function formatHealthMarkdown({ healthRow, path, minutes }) {
 function formatSpikeExplanationMarkdown({ spikeTime, beforeTop, afterTop }) {
   const ts = spikeTime ? spikeTime.toLocaleString() : "the spike time";
   const fmtTop = (rows) => {
-    if (!rows || rows.length === 0) return "_No failing endpoints in this window._";
+    if (!rows || rows.length === 0)
+      return "_No failing endpoints in this window._";
     return rows
       .map((r, i) => {
-        const ep = `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
+        const ep =
+          `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
         return `${i + 1}. ${ep} — **${r.errors}** errors (${Number(r.error_rate_pct).toFixed(2)}%), total ${r.total_requests}`;
       })
       .join("\n");
@@ -508,8 +569,20 @@ function formatSpikeExplanationMarkdown({ spikeTime, beforeTop, afterTop }) {
 
 async function buildMonitoringContextForAI({ userId, suiteId }) {
   const [topFailing, worstLatency, hourly] = await Promise.all([
-    getTopFailingEndpoints({ userId, suiteId, sinceHours: 24, limit: 5, failureStatusMin: 400 }),
-    getWorstLatencyEndpoints({ userId, suiteId, sinceHours: 24, limit: 5, minRequests: 20 }),
+    getTopFailingEndpoints({
+      userId,
+      suiteId,
+      sinceHours: 24,
+      limit: 5,
+      failureStatusMin: 400,
+    }),
+    getWorstLatencyEndpoints({
+      userId,
+      suiteId,
+      sinceHours: 24,
+      limit: 5,
+      minRequests: 20,
+    }),
     getHourlyErrorRate({ userId, suiteId, sinceHours: 48 }),
   ]);
 
@@ -545,13 +618,15 @@ ${String(userMessage || "").trim()}
 exports.getAIReport = async (req, res) => {
   try {
     const { suite_id } = req.query;
-    const forceRefresh = String(req.query.refresh || "").toLowerCase() === "true";
+    const forceRefresh =
+      String(req.query.refresh || "").toLowerCase() === "true";
     const batch = await getBatchById(req.params.id, req.user.id, suite_id);
     if (!batch)
       return res.status(404).json({ error: "Batch not found or unauthorized" });
     console.log("get ai report");
     const cachedReport = normalizeAIReport(batch.ai_report);
-    const hasCachedReport = cachedReport.isValid && !cachedReport.isFailurePlaceholder;
+    const hasCachedReport =
+      cachedReport.isValid && !cachedReport.isFailurePlaceholder;
 
     if (hasCachedReport && !forceRefresh) {
       return res.status(200).json({ report: cachedReport.report });
@@ -576,7 +651,8 @@ exports.getAIReport = async (req, res) => {
       anomalies,
     };
 
-    const reportText = await MonitoringAIService.generateInsightsReport(context);
+    const reportText =
+      await MonitoringAIService.generateInsightsReport(context);
     const normalizedGeneratedReport = normalizeAIReport(reportText);
     if (!normalizedGeneratedReport.isValid) {
       throw new Error("AI backend returned an empty report");
@@ -669,14 +745,22 @@ exports.chat = async (req, res) => {
           tags: ep.tags || [],
           base_url: ep.base_url || null,
           is_active: true,
-          auth_type: ep.auth_type || null
+          auth_type: ep.auth_type || null,
         }));
     }
 
     // Call Python Orchestrator
     const pythonSessionId = session_id || suite_id;
-    console.log(`[MONITORING_CHAT] Full Payload:`, JSON.stringify({ message: message.substring(0, 50), suite_id, session_id, pythonSessionId }));
-    
+    console.log(
+      `[MONITORING_CHAT] Full Payload:`,
+      JSON.stringify({
+        message: message.substring(0, 50),
+        suite_id,
+        session_id,
+        pythonSessionId,
+      }),
+    );
+
     // Some Python backends might expect session_id in the URL or under a different name (conv_id)
     const pythonUrl = `${PYTHON_BACKEND_URL}/chat/?session_id=${encodeURIComponent(pythonSessionId)}`;
 
@@ -714,5 +798,356 @@ exports.deleteBatch = async (req, res) => {
     res.status(200).json({ message: "Batch deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+
+  // ── Helper: parse interval string to BullMQ repeat options ──
+  function parseIntervalToRepeat(interval) {
+    if (interval.endsWith("m")) {
+      return { every: parseInt(interval) * 60 * 1000 };
+    } else if (interval.endsWith("h")) {
+      return { every: parseInt(interval) * 60 * 60 * 1000 };
+    }
+    // Assume cron expression
+    return { pattern: interval };
+  }
+};
+
+exports.createJob = async (req, res) => {
+  try {
+    const { suite_id } = req.params;
+    const user_id = req.user.id;
+    const jobData = { ...req.body, user_id, suite_id };
+
+    const job = await monitoringModel.createMonitoringJob(jobData);
+
+    // Schedule in BullMQ
+    const repeatOptions = parseIntervalToRepeat(job.schedule_interval);
+    await monitoringQueue.add(
+      `monitoring_job_${job.id}`,
+      { jobId: job.id },
+      { repeat: repeatOptions },
+    );
+
+    // Add an immediate run so the user doesn't have to wait for the first interval
+    await monitoringQueue.add(
+      `monitoring_job_manual_${job.id}`,
+      { jobId: job.id },
+      { jobId: `manual_${job.id}_${Date.now()}` },
+    );
+
+    res.status(201).json(job);
+  } catch (error) {
+    console.error("Error creating monitoring job:", error);
+    res.status(500).json({ error: "Failed to create monitoring job" });
+  }
+};
+
+exports.getJobs = async (req, res) => {
+  try {
+    const { suite_id } = req.params;
+    const user_id = req.user.id;
+    const jobs = await monitoringModel.getMonitoringJobs(user_id, suite_id);
+
+    // Attach stats for each job
+    const enrichedJobs = await Promise.all(
+      jobs.map(async (job) => {
+        const stats = await monitoringModel.getJobStats(job.id);
+        return {
+          ...job,
+          total_runs: parseInt(stats?.total_runs || 0),
+          pass_count: parseInt(stats?.pass_count || 0),
+          fail_count: parseInt(stats?.fail_count || 0),
+          avg_latency: parseInt(stats?.avg_latency || 0),
+          p50_latency: parseInt(stats?.p50_latency || 0),
+          p95_latency: parseInt(stats?.p95_latency || 0),
+          p99_latency: parseInt(stats?.p99_latency || 0),
+          pass_rate:
+            stats?.total_runs > 0
+              ? ((stats.pass_count / stats.total_runs) * 100).toFixed(1)
+              : "0",
+          uptime:
+            stats?.total_runs > 0
+              ? ((stats.pass_count / stats.total_runs) * 100).toFixed(2)
+              : "0",
+        };
+      }),
+    );
+
+    res.json(enrichedJobs);
+  } catch (error) {
+    console.error("Error fetching monitoring jobs:", error);
+    res.status(500).json({ error: "Failed to fetch monitoring jobs" });
+  }
+};
+
+exports.getJobResults = async (req, res) => {
+  try {
+    const { job_id } = req.params;
+    const results = await monitoringModel.getMonitoringResultsByJob(job_id);
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching job results:", error);
+    res.status(500).json({ error: "Failed to fetch job results" });
+  }
+};
+
+exports.getJobAlerts = async (req, res) => {
+  try {
+    const { job_id } = req.params;
+    const alerts = await monitoringModel.getMonitoringAlertsByJob(job_id);
+    res.json(alerts);
+  } catch (error) {
+    console.error("Error fetching job alerts:", error);
+    res.status(500).json({ error: "Failed to fetch job alerts" });
+  }
+};
+
+// ── Suite-level aggregates (all jobs) ─────────────────────
+exports.getSuiteResults = async (req, res) => {
+  try {
+    const { suite_id } = req.params;
+    const results = await monitoringModel.getMonitoringResultsBySuite(suite_id);
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching suite results:", error);
+    res.status(500).json({ error: "Failed to fetch suite results" });
+  }
+};
+
+exports.getSuiteAlerts = async (req, res) => {
+  try {
+    const { suite_id } = req.params;
+    const alerts = await monitoringModel.getMonitoringAlertsBySuite(suite_id);
+    res.json(alerts);
+  } catch (error) {
+    console.error("Error fetching suite alerts:", error);
+    res.status(500).json({ error: "Failed to fetch suite alerts" });
+  }
+};
+
+exports.acknowledgeAlert = async (req, res) => {
+  try {
+    const { alert_id } = req.params;
+    const alert = await monitoringModel.resolveMonitoringAlert(alert_id);
+    if (!alert) return res.status(404).json({ error: "Alert not found" });
+    res.json(alert);
+  } catch (error) {
+    console.error("Error acknowledging alert:", error);
+    res.status(500).json({ error: "Failed to acknowledge alert" });
+  }
+};
+
+exports.toggleJob = async (req, res) => {
+  try {
+    const { job_id } = req.params;
+    const { is_active } = req.body;
+
+    const job = await monitoringModel.updateMonitoringJob(job_id, {
+      is_active,
+    });
+
+    if (!is_active) {
+      const repeatableJobs = await monitoringQueue.getRepeatableJobs();
+      const bullJob = repeatableJobs.find(
+        (rj) => rj.name === `monitoring_job_${job_id}`,
+      );
+      if (bullJob) {
+        await monitoringQueue.removeRepeatableByKey(bullJob.key);
+      }
+    } else {
+      const repeatOptions = parseIntervalToRepeat(job.schedule_interval);
+      await monitoringQueue.add(
+        `monitoring_job_${job.id}`,
+        { jobId: job.id },
+        { repeat: repeatOptions },
+      );
+    }
+
+    res.json(job);
+  } catch (error) {
+    console.error("Error toggling monitoring job:", error);
+    res.status(500).json({ error: "Failed to toggle monitoring job" });
+  }
+};
+
+exports.deleteJob = async (req, res) => {
+  try {
+    const { job_id } = req.params;
+
+    const repeatableJobs = await monitoringQueue.getRepeatableJobs();
+    const bullJob = repeatableJobs.find(
+      (rj) => rj.name === `monitoring_job_${job_id}`,
+    );
+    if (bullJob) {
+      await monitoringQueue.removeRepeatableByKey(bullJob.key);
+    }
+
+    await monitoringModel.deleteMonitoringJob(job_id);
+    res.json({ message: "Job deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting monitoring job:", error);
+    res.status(500).json({ error: "Failed to delete monitoring job" });
+  }
+};
+
+exports.runJobNow = async (req, res) => {
+  try {
+    const { job_id } = req.params;
+    await monitoringQueue.add(
+      `monitoring_job_manual_${job_id}`,
+      { jobId: job_id },
+      { jobId: `manual_${job_id}_${Date.now()}` },
+    );
+    res.json({ message: "Job queued for immediate execution" });
+  } catch (error) {
+    console.error("Error triggering manual run:", error);
+    res.status(500).json({ error: "Failed to trigger job" });
+  }
+};
+
+// ── Auto-Sync from Generated Tests ─────────────────────────
+exports.syncSuiteJobs = async (req, res) => {
+  try {
+    const { suite_id } = req.params;
+    const user_id = req.user.id;
+    const { status, target_environment_id } = req.body; // 'active' or 'paused', optional environment
+
+    const existingJobs = await monitoringModel.getMonitoringJobs(
+      user_id,
+      suite_id,
+    );
+    const repeatableJobs = await monitoringQueue.getRepeatableJobs();
+
+    if (status === "paused") {
+      for (const job of existingJobs) {
+        if (job.is_active) {
+          await monitoringModel.updateMonitoringJob(job.id, {
+            is_active: false,
+          });
+          const bullJob = repeatableJobs.find(
+            (rj) => rj.name === `monitoring_job_${job.id}`,
+          );
+          if (bullJob) await monitoringQueue.removeRepeatableByKey(bullJob.key);
+        }
+      }
+      return res.json({ message: "Monitoring paused for all jobs in suite" });
+    }
+
+    for (const job of existingJobs) {
+      const bullJob = repeatableJobs.find(
+        (rj) => rj.name === `monitoring_job_${job.id}`,
+      );
+      if (bullJob) await monitoringQueue.removeRepeatableByKey(bullJob.key);
+      await monitoringModel.deleteMonitoringJob(job.id);
+    }
+
+    const generatedTests = await GeneratedTest.find({ suite_id, user_id });
+    if (!generatedTests || generatedTests.length === 0) {
+      return res.status(404).json({
+        error: "No generated tests found for this suite to monitor.",
+      });
+    }
+
+    let env = null;
+    let finalEnvId = target_environment_id;
+
+    if (!finalEnvId) {
+      // Auto-resolve: priority is default environment for suite > any suite environment > first user environment
+      const envs = await environmentModel.listEnvironmentsByUser(
+        user_id,
+        suite_id,
+      );
+      const defaultEnv = envs.find((e) => e.is_default) || envs[0];
+      if (defaultEnv) {
+        finalEnvId = defaultEnv.id;
+        env = defaultEnv;
+      }
+    } else {
+      env = await environmentModel.getEnvironmentById(finalEnvId);
+    }
+
+    // Fetch the suite's own base_url as ultimate fallback
+    let suiteBaseUrl = "";
+    try {
+      const suite = await suitesService.getTestSuiteById(user_id, suite_id);
+      if (suite && suite.base_url) {
+        suiteBaseUrl = suite.base_url;
+      }
+    } catch (e) {
+      console.warn("[monitoring] Could not fetch suite base_url:", e.message);
+    }
+
+    const createdJobs = [];
+    const repeatOptions = parseIntervalToRepeat("5m");
+    const createdKeys = new Set();
+
+    for (const test of generatedTests) {
+      let endpointsToMonitor = [];
+
+      if (test.endpoint && test.endpoint.path) {
+        endpointsToMonitor.push(test.endpoint);
+      } else if (test.request_options && test.request_options.endpoints) {
+        endpointsToMonitor = test.request_options.endpoints;
+      }
+
+      for (const ep of endpointsToMonitor) {
+        if (!ep.path) continue;
+
+        const method = ep.method || "GET";
+        const pathBase = ep.path.split("?")[0];
+        const key = `${method} ${pathBase}`;
+
+        if (createdKeys.has(key)) continue;
+        createdKeys.add(key);
+
+        // Priority: ep.base_url > env.base_url > suite.base_url > ''
+        const baseUrl =
+          ep.base_url || (env ? env.base_url : "") || suiteBaseUrl;
+        const url =
+          baseUrl + (ep.path.startsWith("/") ? ep.path : `/${ep.path}`);
+
+        const jobData = {
+          user_id,
+          suite_id,
+          name: `Monitor: ${method} ${pathBase}`,
+          description: `Auto-synced from Generated Test ${test._id}`,
+          schedule_interval: "5m",
+          failure_threshold: 3,
+          target_environment_id: finalEnvId || null,
+          test_case_definitions: [
+            {
+              name: "Auto Endpoint Check",
+              method: method,
+              url: url,
+              assertions: [{ type: "status", expected: "200" }],
+              headers: ep.headers || {},
+              body: test.request_options?.body || {},
+            },
+          ],
+        };
+
+        const job = await monitoringModel.createMonitoringJob(jobData);
+        await monitoringQueue.add(
+          `monitoring_job_${job.id}`,
+          { jobId: job.id },
+          { repeat: repeatOptions },
+        );
+        await monitoringQueue.add(
+          `monitoring_job_manual_${job.id}`,
+          { jobId: job.id },
+          { jobId: `manual_${job.id}_${Date.now()}` },
+        );
+
+        createdJobs.push(job);
+      }
+    }
+
+    res.status(201).json({
+      message: "Monitoring enabled and synced successfully",
+      jobs: createdJobs,
+    });
+  } catch (error) {
+    console.error("Error syncing monitoring jobs:", error);
+    res.status(500).json({ error: "Failed to sync monitoring jobs" });
   }
 };

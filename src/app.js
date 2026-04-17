@@ -22,6 +22,7 @@ const chatRoutes = require("./routes/chat.routes");
 const securityScanRoutes = require("./routes/securityScan.routes");
 const monitoringRoutes = require("./routes/monitoring.routes");
 const loadtestRoutes = require("./routes/loadtest.routes");
+//const securityRoutes = require("./routes/security.routes");
 
 dotenv.config();
 
@@ -40,7 +41,7 @@ const allowedOrigins = [
   "http://localhost:3001",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3001",
-  "https://nexdash.cyber1337x.dev"
+  "https://nexdash.cyber1337x.dev",
 ];
 
 const NODE_ENV = process.env.NODE_ENV || "development";
@@ -56,24 +57,24 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error("Not allowed by CORS"));
       }
     },
     // Allow headers needed for multipart/form-data uploads
     // Note: When using FormData, browser sets Content-Type with boundary automatically
     allowedHeaders: [
-      "Content-Type",  // Required for multipart/form-data (browser sets with boundary)
+      "Content-Type", // Required for multipart/form-data (browser sets with boundary)
       "Authorization",
       "X-Requested-With",
       "Accept",
       "Origin",
-      "Cache-Control"
+      "Cache-Control",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     exposedHeaders: ["set-cookie"],
     preflightContinue: false,
-    optionsSuccessStatus: 204
-  })
+    optionsSuccessStatus: 204,
+  }),
 );
 
 app.use(express.json());
@@ -106,7 +107,7 @@ app.use(
       domain: COOKIE_DOMAIN,
       path: "/",
     },
-  })
+  }),
 );
 
 //---------> ROUTES <-----------
@@ -130,6 +131,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/security-scan", securityScanRoutes);
 app.use("/api/monitoring", monitoringRoutes);
 app.use("/api/load-test", loadtestRoutes);
+//app.use("/api/security", securityRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
