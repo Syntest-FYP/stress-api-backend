@@ -71,7 +71,7 @@ async function analyzeSpecService(user_id, suite_id) {
 
   if (!specFilePath) throw new Error("No spec file found in suite directory");
 
-  const specContent = fs.readFileSync(specFilePath, "utf8");
+  const specContent = fs.readFileSync(specFilePath, "utf8").replace(/^\uFEFF/, "");
 
   const analysisPayload = {
     specification: specContent,
@@ -141,7 +141,7 @@ async function getAnalysisService(user_id, suite_id) {
     .find((p) => fs.existsSync(p));
 
   if (specFilePath) {
-    const specContent = fs.readFileSync(specFilePath, "utf8");
+    const specContent = fs.readFileSync(specFilePath, "utf8").replace(/^\uFEFF/, "");
     analysis.spec_file_content = specContent; // Attach the raw spec content
   }
 

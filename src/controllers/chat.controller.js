@@ -7,7 +7,9 @@ const path = require("path");
 const yaml = require("js-yaml");
 
 const PYTHON_BACKEND_URL =
-  process.env.PYTHON_BACKEND_URL || "http://localhost:8000";
+  process.env.AI_BACKEND_URL ||
+  process.env.PYTHON_BACKEND_URL ||
+  "http://localhost:8000";
 
 function transformEndpoints(endpoints) {
   return endpoints
@@ -458,11 +460,22 @@ exports.getSuiteChatSessions = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing suiteId" });
     }
 
-    const response = await axios.get(
-      `${PYTHON_BACKEND_URL}/chat/sessions/${encodeURIComponent(suiteId)}`,
-      { timeout: 15000 }
-    );
-    return res.status(200).json({ success: true, data: response.data });
+    const encodedSuiteId = encodeURIComponent(suiteId);
+    const primaryUrl = `${PYTHON_BACKEND_URL}/chat/sessions/${encodedSuiteId}`;
+    const fallbackUrl = `${PYTHON_BACKEND_URL}/api/chat/sessions/${encodedSuiteId}`;
+
+    try {
+      const response = await axios.get(primaryUrl, { timeout: 30000 });
+      return res.status(200).json({ success: true, data: response.data });
+    } catch (primaryErr) {
+      // Some deployments mount FastAPI routes under /api; retry there before failing.
+      const status = primaryErr.response?.status;
+      if (status === 404 || status === 405 || primaryErr.code === "ECONNABORTED") {
+        const fallbackResponse = await axios.get(fallbackUrl, { timeout: 30000 });
+        return res.status(200).json({ success: true, data: fallbackResponse.data });
+      }
+      throw primaryErr;
+    }
   } catch (error) {
     if (error.response) {
       return res.status(error.response.status).json({

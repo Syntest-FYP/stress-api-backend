@@ -36,5 +36,5 @@ const upload = multer({
 });
 
 module.exports = {
-  uploadLogs: upload.single('logs')
+  uploadLogs: upload.single('file')
 };

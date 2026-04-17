@@ -110,7 +110,7 @@ exports.getUploadedSpec = async (req, res) => {
     const fileExt = path.extname(fileName).toLowerCase();
 
     let spec;
-    const fileContent = fs.readFileSync(filePath, "utf8");
+    const fileContent = fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "");
 
     if (fileExt === ".json") {
       spec = JSON.parse(fileContent);
@@ -292,7 +292,7 @@ exports.autoUploadAndGenerateTests = async (req, res) => {
     let apiName =
       req.body.name || "Imported API " + new Date().toLocaleDateString();
     try {
-      const fileContent = fs.readFileSync(req.file.path, "utf8");
+      const fileContent = fs.readFileSync(req.file.path, "utf8").replace(/^\uFEFF/, "");
       const specData = req.file.originalname.endsWith(".json")
         ? JSON.parse(fileContent)
         : yaml.load(fileContent);

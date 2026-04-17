@@ -24,6 +24,7 @@ router.post("/orchestrate", orchestrateChat);
 // Session helpers
 router.get("/session/:sessionId/context", getSessionContext);
 router.get("/session/:sessionId/history", getChatHistory);
+router.get("/history/:sessionId", getChatHistory); // Alias for compatibility
 router.get("/sessions/:suiteId", getSuiteChatSessions);
 router.delete("/session/:sessionId", clearSession);
 

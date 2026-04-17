@@ -1,0 +1,346 @@
+{
+	"info": {
+		"_postman_id": "96edbaa5-a16b-4996-aeaf-204c14c7d6fe",
+		"name": "Syntest - Passive Monitoring",
+		"description": "API collection for Module 5: Passive Monitoring subsystem.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Log Ingestion",
+			"item": [
+				{
+					"name": "Upload Log File",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "format",
+									"value": "json",
+									"type": "text"
+								},
+								{
+									"key": "field_mapping",
+									"value": "{\"timestamp\": \"time\", \"endpoint_path\": \"url\", \"http_method\": \"verb\", \"status_code\": \"status\"}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"upload"
+							]
+						},
+						"description": "Upload a log file (Max 500MB). Auto-detects format if not provided."
+					},
+					"response": []
+				},
+				{
+					"name": "Webhook Ingest (API Key)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{api_key}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"timestamp\": \"2026-03-15T12:00:00Z\",\n    \"path\": \"/api/v1/users\",\n    \"method\": \"GET\",\n    \"status\": 200,\n    \"responseTime\": 45\n  }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/ingest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"ingest"
+							]
+						},
+						"description": "Stream logs from API gateways."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Batch Management",
+			"item": [
+				{
+					"name": "List Batches",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/batches?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"batches"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Batch Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/batches/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"batches",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{batch_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Batch",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/batches/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"batches",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{batch_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Analytics & Anomalies",
+			"item": [
+				{
+					"name": "Get Batch Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/batches/:id/analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"batches",
+								":id",
+								"analytics"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{batch_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Detected Anomalies",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/batches/:id/anomalies",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"batches",
+								":id",
+								"anomalies"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{batch_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AI Insights",
+			"item": [
+				{
+					"name": "Get AI Insights Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/batches/:id/ai-report",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"batches",
+								":id",
+								"ai-report"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{batch_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Tests from Anomalies",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/monitoring/batches/:id/generate-tests",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"batches",
+								":id",
+								"generate-tests"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{batch_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{auth_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "your_jwt_token_here",
+			"type": "string"
+		},
+		{
+			"key": "api_key",
+			"value": "your_api_key_here",
+			"type": "string"
+		},
+		{
+			"key": "batch_id",
+			"value": "replace_with_batch_id",
+			"type": "string"
+		}
+	]
+}
