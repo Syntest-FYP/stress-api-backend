@@ -282,6 +282,263 @@ exports.webhookIngest = async (req, res) => {
 
 const MonitoringAIService = require("../services/monitoringAIService");
 
+function parseWindowHours(message) {
+  const text = String(message || "");
+  // Common phrasings: "last 24 hours", "past 7 days", "last day", "last week"
+  const hoursMatch = text.match(/\b(?:last|past)\s+(\d+)\s*(hour|hours|hr|hrs)\b/i);
+  if (hoursMatch) return Math.max(1, Number(hoursMatch[1]));
+
+  const daysMatch = text.match(/\b(?:last|past)\s+(\d+)\s*(day|days)\b/i);
+  if (daysMatch) return Math.max(1, Number(daysMatch[1]) * 24);
+
+  if (/\blast\s+day\b/i.test(text)) return 24;
+  if (/\blast\s+week\b/i.test(text)) return 24 * 7;
+
+  return 24;
+}
+
+function isTopFailingEndpointsQuestion(message) {
+  const text = String(message || "").toLowerCase();
+  const mentionsEndpoints = /endpoint|route|path|api/.test(text);
+  const mentionsFailing = /fail|failure|error|5xx|4xx|broken|down/.test(text);
+  const mentionsTop = /most|top|worst|highest/.test(text);
+  const mentionsWindow = /last|past|24\s*hour|day|week/.test(text);
+  return mentionsEndpoints && mentionsFailing && (mentionsTop || mentionsWindow);
+}
+
+function inferFailureThreshold(message) {
+  const text = String(message || "").toLowerCase();
+  // If user explicitly says 4xx/5xx, honor it.
+  if (/\b4xx\b/.test(text) || /\bclient\b/.test(text)) return 400;
+  if (/\b5xx\b/.test(text) || /\bserver\b/.test(text)) return 500;
+
+  // In natural language, "failing endpoints" usually means "non-2xx success".
+  // We approximate this as HTTP >= 400 (includes 4xx + 5xx), which is what most users want.
+  return 400;
+}
+
+function titleForWindow(hours) {
+  if (hours === 24) return "last 24 hours";
+  return `last ${hours} hours`;
+}
+
+function formatTopFailingMarkdown({ rows, hours, failureStatusMin }) {
+  const titleWindow = titleForWindow(hours);
+  if (!rows || rows.length === 0) {
+    return `No failing endpoints found in the ${titleWindow} (failure threshold: HTTP >= ${failureStatusMin}).`;
+  }
+
+  const header =
+    `### Top failing endpoints (${titleWindow})\n` +
+    `Failure threshold: **HTTP >= ${failureStatusMin}**\n\n` +
+    `| Rank | Endpoint | Failures | Total | Failure rate | Last seen |\n` +
+    `|---:|---|---:|---:|---:|---|\n`;
+
+  const lines = rows.map((r, idx) => {
+    const endpoint = `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
+    const failures = Number(r.failures_selected || 0);
+    const total = Number(r.total_requests || 0);
+    const rate = r.selected_failure_rate_pct !== null && r.selected_failure_rate_pct !== undefined
+      ? `${Number(r.selected_failure_rate_pct).toFixed(2)}%`
+      : "n/a";
+    const lastSeen = r.last_seen ? new Date(r.last_seen).toLocaleString() : "n/a";
+    return `| ${idx + 1} | ${endpoint} | ${failures} | ${total} | ${rate} | ${lastSeen} |`;
+  });
+
+  const footnote =
+    `\n\nIf you want, ask: **"show me the last 20 failures for #1"** or **"break down failures by status code for /checkout"**.`;
+
+  return header + lines.join("\n") + footnote;
+}
+
+function formatLatencyWorstMarkdown({ rows, hours }) {
+  const titleWindow = titleForWindow(hours);
+  if (!rows || rows.length === 0) {
+    return `No latency data available in the ${titleWindow} (not enough requests per endpoint).`;
+  }
+
+  const header =
+    `### Worst latency endpoints (${titleWindow})\n\n` +
+    `| Rank | Endpoint | Requests | Avg | P95 | P99 | Max | Last seen |\n` +
+    `|---:|---|---:|---:|---:|---:|---:|---|\n`;
+
+  const lines = rows.map((r, idx) => {
+    const endpoint = `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
+    const reqs = Number(r.total_requests || 0);
+    const avg = r.avg_ms !== null && r.avg_ms !== undefined ? `${Number(r.avg_ms).toFixed(2)}ms` : "n/a";
+    const p95 = r.p95_ms !== null && r.p95_ms !== undefined ? `${Number(r.p95_ms).toFixed(0)}ms` : "n/a";
+    const p99 = r.p99_ms !== null && r.p99_ms !== undefined ? `${Number(r.p99_ms).toFixed(0)}ms` : "n/a";
+    const max = r.max_ms !== null && r.max_ms !== undefined ? `${Number(r.max_ms)}ms` : "n/a";
+    const lastSeen = r.last_seen ? new Date(r.last_seen).toLocaleString() : "n/a";
+    return `| ${idx + 1} | ${endpoint} | ${reqs} | ${avg} | ${p95} | ${p99} | ${max} | ${lastSeen} |`;
+  });
+
+  return header + lines.join("\n");
+}
+
+function extractPathFromQuestion(message) {
+  const text = String(message || "");
+  const backtick = text.match(/`([^`]+)`/);
+  if (backtick?.[1]) return backtick[1].trim();
+
+  const quoted = text.match(/"([^"]+)"/);
+  if (quoted?.[1]) return quoted[1].trim();
+
+  const slash = text.match(/(\/[a-zA-Z0-9._~!$&'()*+,;=:@%/-]+)/);
+  if (slash?.[1]) return slash[1].trim();
+
+  if (/\bcheckout\b/i.test(text)) return "/checkout";
+
+  return "";
+}
+
+function isLatencyWorstQuestion(message) {
+  const text = String(message || "").toLowerCase();
+  return /latency|slow|slowest|p95|p99|response time/.test(text) && /worst|highest|top|most/.test(text);
+}
+
+function isStatusBreakdownQuestion(message) {
+  const text = String(message || "").toLowerCase();
+  return /(status|status code|codes|breakdown|distribution)/.test(text) && /(\/|endpoint|path|route|checkout)/.test(text);
+}
+
+function isHealthQuestion(message) {
+  const text = String(message || "").toLowerCase();
+  return /(healthy|health|ok|okay|down|broken|working)/.test(text) && /(checkout|workflow|endpoint|path|route|api|\/)/.test(text);
+}
+
+function isSpikeAtTimeQuestion(message) {
+  const text = String(message || "").toLowerCase();
+  return /(spike|surge|jump)/.test(text) && /(before|leading up|prior)/.test(text) && /\b\d{1,2}\s*(am|pm)\b/.test(text);
+}
+
+function parseTimeOfDayToLatestDate(message) {
+  const text = String(message || "");
+  const m = text.match(/\b(\d{1,2})\s*(am|pm)\b/i);
+  if (!m) return null;
+  let hour = Number(m[1]);
+  const ampm = String(m[2] || "").toLowerCase();
+  if (Number.isNaN(hour) || hour < 1 || hour > 12) return null;
+  if (ampm === "pm" && hour !== 12) hour += 12;
+  if (ampm === "am" && hour === 12) hour = 0;
+
+  const now = new Date();
+  const candidate = new Date(now);
+  candidate.setMinutes(0, 0, 0);
+  candidate.setHours(hour);
+  if (candidate.getTime() > now.getTime()) {
+    candidate.setDate(candidate.getDate() - 1);
+  }
+  return candidate;
+}
+
+function formatStatusBreakdownMarkdown({ rows, path, hours }) {
+  const titleWindow = titleForWindow(hours);
+  if (!rows || rows.length === 0) {
+    return `No status-code data found for \`${path}\` in the ${titleWindow}.`;
+  }
+
+  const header =
+    `### Status code breakdown for \`${path}\` (${titleWindow})\n\n` +
+    `| Endpoint | Status | Count | Last seen |\n` +
+    `|---|---:|---:|---|\n`;
+
+  const lines = rows.map((r) => {
+    const endpoint = `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
+    const status = Number(r.status_code);
+    const count = Number(r.count || 0);
+    const lastSeen = r.last_seen ? new Date(r.last_seen).toLocaleString() : "n/a";
+    return `| ${endpoint} | ${status} | ${count} | ${lastSeen} |`;
+  });
+
+  return header + lines.join("\n");
+}
+
+function formatHealthMarkdown({ healthRow, path, minutes }) {
+  if (!healthRow) {
+    return `No recent traffic for \`${path}\` in the last ${minutes} minutes.`;
+  }
+
+  const endpoint = `\`${String(healthRow.http_method || "").toUpperCase()} ${healthRow.endpoint_path}\``.trim();
+  const total = Number(healthRow.total_requests || 0);
+  const errRate =
+    healthRow.error_rate_pct !== null && healthRow.error_rate_pct !== undefined
+      ? `${Number(healthRow.error_rate_pct).toFixed(2)}%`
+      : "n/a";
+  const p95 = healthRow.p95_ms !== null && healthRow.p95_ms !== undefined ? `${Number(healthRow.p95_ms).toFixed(0)}ms` : "n/a";
+  const p99 = healthRow.p99_ms !== null && healthRow.p99_ms !== undefined ? `${Number(healthRow.p99_ms).toFixed(0)}ms` : "n/a";
+  const avg = healthRow.avg_ms !== null && healthRow.avg_ms !== undefined ? `${Number(healthRow.avg_ms).toFixed(2)}ms` : "n/a";
+  const lastSeen = healthRow.last_seen ? new Date(healthRow.last_seen).toLocaleString() : "n/a";
+
+  const isHealthy = total > 0 && Number(healthRow.error_rate_pct || 0) < 5;
+
+  return (
+    `### Health for \`${path}\` (last ${minutes} minutes)\n\n` +
+    `- Endpoint sampled: ${endpoint}\n` +
+    `- Requests: **${total}**\n` +
+    `- Error rate (4xx+5xx): **${errRate}** (4xx: ${Number(healthRow.errors_4xx || 0)}, 5xx: ${Number(
+      healthRow.errors_5xx || 0,
+    )})\n` +
+    `- Latency: avg **${avg}**, p95 **${p95}**, p99 **${p99}**\n` +
+    `- Last seen: ${lastSeen}\n\n` +
+    `Overall: **${isHealthy ? "HEALTHY" : "DEGRADED"}**`
+  );
+}
+
+function formatSpikeExplanationMarkdown({ spikeTime, beforeTop, afterTop }) {
+  const ts = spikeTime ? spikeTime.toLocaleString() : "the spike time";
+  const fmtTop = (rows) => {
+    if (!rows || rows.length === 0) return "_No failing endpoints in this window._";
+    return rows
+      .map((r, i) => {
+        const ep = `\`${String(r.http_method || "").toUpperCase()} ${r.endpoint_path}\``.trim();
+        return `${i + 1}. ${ep} — **${r.errors}** errors (${Number(r.error_rate_pct).toFixed(2)}%), total ${r.total_requests}`;
+      })
+      .join("\n");
+  };
+
+  return (
+    `### What changed before the spike at ${ts}\n\n` +
+    `I compared the **2 hours before** vs **2 hours after** the spike time, and ranked endpoints by error count (HTTP >= 400).\n\n` +
+    `**Before (2h window)**\n${fmtTop(beforeTop)}\n\n` +
+    `**After (2h window)**\n${fmtTop(afterTop)}\n\n` +
+    `If you tell me which endpoint you care about, I can drill down into status codes and latency just for that path.`
+  );
+}
+
+async function buildMonitoringContextForAI({ userId, suiteId }) {
+  const [topFailing, worstLatency, hourly] = await Promise.all([
+    getTopFailingEndpoints({ userId, suiteId, sinceHours: 24, limit: 5, failureStatusMin: 400 }),
+    getWorstLatencyEndpoints({ userId, suiteId, sinceHours: 24, limit: 5, minRequests: 20 }),
+    getHourlyErrorRate({ userId, suiteId, sinceHours: 48 }),
+  ]);
+
+  return {
+    window_hours: 24,
+    top_failing_endpoints: topFailing,
+    worst_latency_endpoints: worstLatency,
+    hourly_error_rate_last_48h: hourly,
+  };
+}
+
+function buildAIPromptContract({ userMessage, context }) {
+  return `
+You are a monitoring assistant. You MUST answer using the provided live monitoring context.
+
+RESPONSE CONTRACT (follow strictly):
+- Answer the user's question directly in 3-10 bullet points (no generic incident templates).
+- Always include: timeframe, endpoint paths (with HTTP method if present), and numbers (counts/rates/latency).
+- If the answer cannot be derived from the context, say exactly what data is missing and what query would answer it.
+- Do NOT output "Recommended Actions" unless the user explicitly asks for actions.
+
+LIVE MONITORING CONTEXT (JSON):
+${JSON.stringify(context, null, 2)}
+
+USER QUESTION:
+${String(userMessage || "").trim()}
+`.trim();
+}
+
 /**
  * AI Insights Report
  */
@@ -382,7 +639,8 @@ exports.generateTests = async (req, res) => {
  */
 exports.chat = async (req, res) => {
   try {
-    const { message, suite_id, endpoints = [] } = req.body;
+    const { message, suite_id, session_id } = req.body;
+    const userId = req.user._id || req.user.id;
 
     if (!message || !suite_id) {
       return res
@@ -390,11 +648,44 @@ exports.chat = async (req, res) => {
         .json({ error: "message and suite_id are required" });
     }
 
+    // Thin proxy: delegate monitoring Q&A routing/tool-selection to stress-api-ai.
+    // Node backend should not enforce local intent logic/time windows.
+    const EndpointCollection = require("../models/Endpoint");
+    const collection = await EndpointCollection.findOne({
+      user_id: userId.toString(),
+      suite_id: suite_id,
+    });
+
+    let endpoints = [];
+    if (collection && collection.endpoints) {
+      // Re-use transformEndpoints or similar logic to map correctly
+      endpoints = collection.endpoints
+        .filter((ep) => ep.is_active)
+        .map((ep) => ({
+          name: ep.name || `${ep.method} ${ep.path}`,
+          method: (ep.method || "").toUpperCase(),
+          path: ep.path,
+          description: ep.description || "",
+          tags: ep.tags || [],
+          base_url: ep.base_url || null,
+          is_active: true,
+          auth_type: ep.auth_type || null
+        }));
+    }
+
     // Call Python Orchestrator
-    const response = await axios.post(`${PYTHON_BACKEND_URL}/chat/`, {
+    const pythonSessionId = session_id || suite_id;
+    console.log(`[MONITORING_CHAT] Full Payload:`, JSON.stringify({ message: message.substring(0, 50), suite_id, session_id, pythonSessionId }));
+    
+    // Some Python backends might expect session_id in the URL or under a different name (conv_id)
+    const pythonUrl = `${PYTHON_BACKEND_URL}/chat/?session_id=${encodeURIComponent(pythonSessionId)}`;
+
+    const response = await axios.post(pythonUrl, {
       message,
       suite_id,
       endpoints,
+      session_id: pythonSessionId,
+      conv_id: pythonSessionId,
       accessToken: req.headers["authorization"],
       userId: req.user.id,
     });

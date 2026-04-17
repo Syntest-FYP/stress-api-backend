@@ -6,7 +6,12 @@ const axios = require("axios");
  */
 class MonitoringAIService {
   constructor() {
-    this.AI_URL = (process.env.PYTHON_BACKEND_URL || "http://localhost:8000").replace(/\/+$/, "");
+    // Keep compatibility with both env names used across the backend.
+    this.AI_URL = (
+      process.env.AI_BACKEND_URL ||
+      process.env.PYTHON_BACKEND_URL ||
+      "http://localhost:8000"
+    ).replace(/\/+$/, "");
   }
 
   /**
