@@ -312,6 +312,61 @@ const syncSuiteJobs = async (req, res) => {
   }
 };
 
+// ── Monitoring Suites (job groups) ────────────────────────
+const createMonitoringSuite = async (req, res) => {
+  try {
+    const { suite_id } = req.params;
+    const user_id = req.user.id;
+    const { name, description, job_ids } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+    const ms = await monitoringModel.createMonitoringSuite({ user_id, suite_id, name, description, job_ids: job_ids || [] });
+    res.status(201).json(ms);
+  } catch (error) {
+    console.error('Error creating monitoring suite:', error);
+    res.status(500).json({ error: 'Failed to create monitoring suite' });
+  }
+};
+
+const getMonitoringSuites = async (req, res) => {
+  try {
+    const { suite_id } = req.params;
+    const user_id = req.user.id;
+    const suites = await monitoringModel.getMonitoringSuites(user_id, suite_id);
+    res.json(suites);
+  } catch (error) {
+    console.error('Error fetching monitoring suites:', error);
+    res.status(500).json({ error: 'Failed to fetch monitoring suites' });
+  }
+};
+
+const updateMonitoringSuite = async (req, res) => {
+  try {
+    const { ms_id } = req.params;
+    const { name, description, job_ids } = req.body;
+    const fields = {};
+    if (name !== undefined) fields.name = name;
+    if (description !== undefined) fields.description = description;
+    if (job_ids !== undefined) fields.job_ids = JSON.stringify(job_ids);
+    const updated = await monitoringModel.updateMonitoringSuite(ms_id, fields);
+    if (!updated) return res.status(404).json({ error: 'Monitoring suite not found' });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating monitoring suite:', error);
+    res.status(500).json({ error: 'Failed to update monitoring suite' });
+  }
+};
+
+const deleteMonitoringSuite = async (req, res) => {
+  try {
+    const { ms_id } = req.params;
+    await monitoringModel.deleteMonitoringSuite(ms_id);
+    res.json({ message: 'Monitoring suite deleted' });
+  } catch (error) {
+    console.error('Error deleting monitoring suite:', error);
+    res.status(500).json({ error: 'Failed to delete monitoring suite' });
+  }
+};
+
 module.exports = {
   createJob,
   getJobs,
@@ -323,5 +378,9 @@ module.exports = {
   toggleJob,
   deleteJob,
   runJobNow,
-  syncSuiteJobs
+  syncSuiteJobs,
+  createMonitoringSuite,
+  getMonitoringSuites,
+  updateMonitoringSuite,
+  deleteMonitoringSuite,
 };

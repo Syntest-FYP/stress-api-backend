@@ -23,4 +23,10 @@ router.delete('/jobs/:job_id', monitoringController.deleteJob);
 // Alert actions
 router.patch('/alerts/:alert_id/acknowledge', monitoringController.acknowledgeAlert);
 
+// Monitoring Suites (job groups)
+router.post('/suites/:suite_id/monitoring-suites', monitoringController.createMonitoringSuite);
+router.get('/suites/:suite_id/monitoring-suites', monitoringController.getMonitoringSuites);
+router.patch('/monitoring-suites/:ms_id', monitoringController.updateMonitoringSuite);
+router.delete('/monitoring-suites/:ms_id', monitoringController.deleteMonitoringSuite);
+
 module.exports = router;

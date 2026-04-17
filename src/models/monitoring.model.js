@@ -33,10 +33,9 @@ const updateMonitoringJob = async (id, fields) => {
   const keys = Object.keys(fields);
   const values = Object.values(fields);
   if (keys.length === 0) return getMonitoringJobById(id);
-  
-  const setClause = keys.map((k, i) => {
-    return `${k} = $${i + 1}`;
-  }).join(', ');
+
+  // Fixed: use $1, $2 parameterized placeholders
+  const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
 
   const result = await pool.query(
     `UPDATE monitoring_jobs SET ${setClause}, updated_at = NOW() WHERE id = $${keys.length + 1} RETURNING *`,
@@ -137,6 +136,73 @@ const getJobStats = async (job_id) => {
   return result.rows[0];
 };
 
+// ── Monitoring Suites (job groups) ────────────────────────
+const createMonitoringSuite = async (data) => {
+  const { user_id, suite_id, name, description, job_ids } = data;
+  const result = await pool.query(
+    `INSERT INTO monitoring_suites (user_id, suite_id, name, description, job_ids)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [user_id, suite_id, name, description || null, JSON.stringify(job_ids || [])]
+  );
+  return result.rows[0];
+};
+
+const getMonitoringSuites = async (user_id, suite_id) => {
+  const result = await pool.query(
+    `SELECT ms.*,
+       COALESCE(
+         json_agg(
+           json_build_object(
+             'id', mj.id,
+             'name', mj.name,
+             'is_active', mj.is_active,
+             'consecutive_failures', mj.consecutive_failures,
+             'failure_threshold', mj.failure_threshold,
+             'schedule_interval', mj.schedule_interval,
+             'test_case_definitions', mj.test_case_definitions
+           ) ORDER BY pos.ord
+         ) FILTER (WHERE mj.id IS NOT NULL),
+         '[]'
+       ) as jobs
+     FROM monitoring_suites ms
+     LEFT JOIN LATERAL (
+       SELECT elem::uuid as job_id, ordinality as ord
+       FROM jsonb_array_elements_text(ms.job_ids) WITH ORDINALITY AS t(elem, ordinality)
+     ) pos ON true
+     LEFT JOIN monitoring_jobs mj ON mj.id = pos.job_id
+     WHERE ms.user_id = $1 AND ms.suite_id = $2
+     GROUP BY ms.id
+     ORDER BY ms.created_at DESC`,
+    [user_id, suite_id]
+  );
+  return result.rows;
+};
+
+const getMonitoringSuiteById = async (id) => {
+  const result = await pool.query(
+    'SELECT * FROM monitoring_suites WHERE id = $1',
+    [id]
+  );
+  return result.rows[0];
+};
+
+const updateMonitoringSuite = async (id, fields) => {
+  const keys = Object.keys(fields);
+  const values = Object.values(fields);
+  if (keys.length === 0) return getMonitoringSuiteById(id);
+
+  const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
+  const result = await pool.query(
+    `UPDATE monitoring_suites SET ${setClause}, updated_at = NOW() WHERE id = $${keys.length + 1} RETURNING *`,
+    [...values, id]
+  );
+  return result.rows[0];
+};
+
+const deleteMonitoringSuite = async (id) => {
+  await pool.query('DELETE FROM monitoring_suites WHERE id = $1', [id]);
+};
+
 module.exports = {
   createMonitoringJob,
   getMonitoringJobs,
@@ -151,5 +217,10 @@ module.exports = {
   getMonitoringAlertsByJob,
   getMonitoringAlertsBySuite,
   resolveMonitoringAlert,
-  getJobStats
+  getJobStats,
+  createMonitoringSuite,
+  getMonitoringSuites,
+  getMonitoringSuiteById,
+  updateMonitoringSuite,
+  deleteMonitoringSuite,
 };
