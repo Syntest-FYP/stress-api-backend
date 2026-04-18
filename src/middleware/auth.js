@@ -5,7 +5,7 @@ const verifyAuth = async (req, res, next) => {
   try {
     // ✅ Check both cookie and Authorization header
     let accessToken = req.cookies.access_token;
-    
+
     // If no cookie, check Authorization header
     if (!accessToken) {
       const authHeader = req.headers.authorization;
@@ -14,11 +14,11 @@ const verifyAuth = async (req, res, next) => {
       }
     }
 
-    console.log("=== Auth Middleware ===");
-    console.log("Cookie token:", !!req.cookies.access_token);
-    console.log("Header token:", !!req.headers.authorization);
-    console.log("Using token from:", accessToken === req.cookies.access_token ? "cookie" : "header");
-    console.log("=======================");
+    // console.log("=== Auth Middleware ===");
+    // console.log("Cookie token:", !!req.cookies.access_token);
+    // console.log("Header token:", !!req.headers.authorization);
+    // console.log("Using token from:", accessToken === req.cookies.access_token ? "cookie" : "header");
+    // console.log("=======================");
 
     if (!accessToken) {
       return sendError(res, 401, "Not authenticated");
@@ -38,7 +38,7 @@ const optionalAuth = async (req, res, next) => {
   try {
     // ✅ Check both cookie and Authorization header
     let accessToken = req.cookies.access_token;
-    
+
     // If no cookie, check Authorization header
     if (!accessToken) {
       const authHeader = req.headers.authorization;

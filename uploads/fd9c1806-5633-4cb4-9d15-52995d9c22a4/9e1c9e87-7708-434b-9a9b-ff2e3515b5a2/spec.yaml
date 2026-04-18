@@ -1,0 +1,246 @@
+openapi: 3.0.3
+info:
+  title: Demo Vulnerable API (load-test friendly)
+  description: |
+    Optimized for **SynTest / naive load generators** that concatenate `baseUrl + path` as-is.
+
+    - Paths use **real IDs** (e.g. `/posts/101`, `/posts/200`) — not `/users/{id}` — so requests hit real routes on `server.js`.
+    - **JWT-only** operations (`/orders/*`, `/admin/*`, `GET /users/:id`, `DELETE` on users/posts, `POST /posts`) are **omitted** here so the error rate stays low without tokens.
+    - **`POST /auth/register`** and **`POST /auth/login`** are omitted: the load runner often sends empty JSON on POSTs, which yields **400/401** on this API.
+
+    Example **GET /users** and **GET /posts** response bodies match the live server seed data.
+
+    Full server surface (including protected routes) is defined in `server.js`.
+
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:4000
+    description: Default (PORT env overrides)
+
+tags:
+  - name: System
+  - name: Users
+  - name: Posts
+  - name: Utility
+
+components:
+  schemas:
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 100
+        userId:
+          type: integer
+          example: 1
+        title:
+          type: string
+        content:
+          type: string
+        author:
+          type: string
+        is_featured:
+          type: boolean
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        balance:
+          type: number
+        role:
+          type: string
+        is_admin:
+          type: boolean
+
+paths:
+  /:
+    get:
+      tags: [System]
+      summary: Root message
+      operationId: getRoot
+      security: []
+      responses:
+        "200":
+          description: Plain text
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users (public)
+      operationId: listUsers
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+              examples:
+                seedData:
+                  summary: Seeded users from server.js
+                  value:
+                    - id: 1
+                      username: alice
+                      email: alice@test.com
+                      balance: 1000
+                      role: user
+                      is_admin: false
+                    - id: 2
+                      username: bob
+                      email: bob@test.com
+                      balance: 500
+                      role: user
+                      is_admin: false
+                    - id: 3
+                      username: admin
+                      email: admin@test.com
+                      balance: 0
+                      role: admin
+                      is_admin: true
+
+  /posts:
+    get:
+      tags: [Posts]
+      summary: List posts
+      operationId: listPosts
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+              examples:
+                seedData:
+                  summary: Seeded posts from server.js
+                  value:
+                    - id: 100
+                      userId: 1
+                      title: Alice First Post
+                      content: Content by Alice
+                      author: alice
+                      is_featured: false
+                    - id: 101
+                      userId: 1
+                      title: Alice Second Post
+                      content: More content by Alice
+                      author: alice
+                      is_featured: false
+                    - id: 200
+                      userId: 2
+                      title: Bob First Post
+                      content: Content by Bob
+                      author: bob
+                      is_featured: false
+
+  /posts/101:
+    get:
+      tags: [Posts]
+      summary: Get post 101
+      operationId: getPost101
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+              examples:
+                post101:
+                  value:
+                    id: 101
+                    userId: 1
+                    title: Alice Second Post
+                    content: More content by Alice
+                    author: alice
+                    is_featured: false
+
+  /posts/200:
+    get:
+      tags: [Posts]
+      summary: Get post 200
+      operationId: getPost200
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+              examples:
+                post200:
+                  value:
+                    id: 200
+                    userId: 2
+                    title: Bob First Post
+                    content: Content by Bob
+                    author: bob
+                    is_featured: false
+
+  /util/fetch:
+    post:
+      tags: [Utility]
+      summary: SSRF demo echo
+      operationId: utilFetch
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetUrl]
+              properties:
+                targetUrl:
+                  type: string
+            example:
+              targetUrl: https://example.com
+      responses:
+        "200":
+          description: Echo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: fetched
+                  target:
+                    type: string

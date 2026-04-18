@@ -23,6 +23,16 @@ const PYTHON_BACKEND_URL =
 
 const FAILED_REPORT_PREFIX = "Failed to generate AI report:";
 
+function parseIntervalToRepeat(interval) {
+  if (interval.endsWith("m")) {
+    return { every: parseInt(interval) * 60 * 1000 };
+  } else if (interval.endsWith("h")) {
+    return { every: parseInt(interval) * 60 * 60 * 1000 };
+  }
+  // Assume cron expression
+  return { pattern: interval };
+}
+
 function normalizeAIReport(reportValue) {
   if (reportValue === null || reportValue === undefined) {
     return { report: null, isValid: false, isFailurePlaceholder: false };
@@ -801,15 +811,6 @@ exports.deleteBatch = async (req, res) => {
   }
 
   // ── Helper: parse interval string to BullMQ repeat options ──
-  function parseIntervalToRepeat(interval) {
-    if (interval.endsWith("m")) {
-      return { every: parseInt(interval) * 60 * 1000 };
-    } else if (interval.endsWith("h")) {
-      return { every: parseInt(interval) * 60 * 60 * 1000 };
-    }
-    // Assume cron expression
-    return { pattern: interval };
-  }
 };
 
 exports.createJob = async (req, res) => {
