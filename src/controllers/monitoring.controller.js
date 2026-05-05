@@ -257,51 +257,142 @@ const syncSuiteJobs = async (req, res) => {
     const createdKeys = new Set();
     
     for (const test of generatedTests) {
-       let endpointsToMonitor = [];
-       
-       if (test.endpoint && test.endpoint.path) {
-           endpointsToMonitor.push(test.endpoint);
-       } else if (test.request_options && test.request_options.endpoints) {
-           endpointsToMonitor = test.request_options.endpoints;
+       // ── 1. Collect test cases from the generated tests ──────────
+       //    test.tests contains the actual generated test cases with concrete
+       //    request data (method, path, headers, body) from the AI pipeline.
+       //    These paths already have {{placeholder}} format that the monitoring
+       //    worker's resolvePlaceholders() can resolve at execution time.
+       let testCases = [];
+       if (test.tests && Array.isArray(test.tests)) {
+           testCases = test.tests;
+       } else if (test.raw_response) {
+           // Fallback: try to extract from raw_response
+           const raw = test.raw_response;
+           if (raw.test_cases && Array.isArray(raw.test_cases)) {
+               testCases = raw.test_cases;
+           } else if (raw.test_cases_by_module && typeof raw.test_cases_by_module === 'object') {
+               testCases = Object.values(raw.test_cases_by_module).flat();
+           }
        }
-       
-       for (const ep of endpointsToMonitor) {
-           if (!ep.path) continue;
-           
-           const method = ep.method || 'GET';
-           const pathBase = ep.path.split('?')[0];
-           const key = `${method} ${pathBase}`;
-           
-           if (createdKeys.has(key)) continue;
-           createdKeys.add(key);
-           
-           // Priority: ep.base_url > env.base_url > suite.base_url > ''
-           const baseUrl = ep.base_url || (env ? env.base_url : '') || suiteBaseUrl;
-           const url = baseUrl + (ep.path.startsWith('/') ? ep.path : `/${ep.path}`);
-           
-           const jobData = {
-              user_id,
-              suite_id,
-              name: `Monitor: ${method} ${pathBase}`,
-              description: `Auto-synced from Generated Test ${test._id}`,
-              schedule_interval: '5m',
-              failure_threshold: 3,
-              target_environment_id: finalEnvId || null,
-              test_case_definitions: [{
-                 name: 'Auto Endpoint Check',
-                 method: method,
-                 url: url,
-                 assertions: [{ type: 'status', expected: '200' }],
-                 headers: ep.headers || {},
-                 body: test.request_options?.body || {}
-              }]
-           };
-           
-           const job = await monitoringModel.createMonitoringJob(jobData);
-           await monitoringQueue.add(`monitoring_job_${job.id}`, { jobId: job.id }, { repeat: repeatOptions });
-           await monitoringQueue.add(`monitoring_job_manual_${job.id}`, { jobId: job.id }, { jobId: `manual_${job.id}_${Date.now()}` });
-           
-           createdJobs.push(job);
+
+       if (testCases.length > 0) {
+           // ── 2. Group test cases by endpoint (method + path pattern) ──
+           //    Pick one representative "success" test per unique endpoint
+           //    to use as the monitoring check definition.
+           const endpointMap = new Map(); // key -> best test case
+
+           for (const tc of testCases) {
+               const req = tc.request || {};
+               const method = (req.method || tc.method || 'GET').toUpperCase();
+               const rawPath = req.path || tc.path || '';
+               if (!rawPath) continue;
+
+               // Normalise the path template for dedup (collapse placeholder values)
+               // e.g. /posts/101 and /posts/202 should both map to /posts/:id pattern
+               // but /posts/{{id}} stays as /posts/{{id}}
+               const pathBase = rawPath.split('?')[0];
+               const key = `${method} ${pathBase}`;
+
+               // Prefer success / positive scenarios for monitoring
+               const isSuccess = (tc.scenario === 'success' || tc.expected_status === 200 || tc.expected_status === 201);
+
+               if (!endpointMap.has(key)) {
+                   endpointMap.set(key, tc);
+               } else if (isSuccess && (endpointMap.get(key).scenario !== 'success')) {
+                   // Upgrade to a success test case if we had a negative one
+                   endpointMap.set(key, tc);
+               }
+           }
+
+           // ── 3. Create monitoring jobs from the best test cases ──────
+           for (const [key, tc] of endpointMap.entries()) {
+               if (createdKeys.has(key)) continue;
+               createdKeys.add(key);
+
+               const req = tc.request || {};
+               const method = (req.method || tc.method || 'GET').toUpperCase();
+               const rawPath = req.path || tc.path || '';
+               const pathBase = rawPath.split('?')[0];
+
+               // Priority: env.base_url > suite.base_url > ''
+               const baseUrl = (env ? env.base_url : '') || suiteBaseUrl;
+               const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+               const url = baseUrl + path;
+
+               const expectedStatus = String(tc.expected_status || '200');
+
+               const jobData = {
+                  user_id,
+                  suite_id,
+                  name: `Monitor: ${method} ${pathBase}`,
+                  description: `Auto-synced from Generated Test ${test._id}`,
+                  schedule_interval: '5m',
+                  failure_threshold: 3,
+                  target_environment_id: finalEnvId || null,
+                  test_case_definitions: [{
+                     name: tc.name || 'Auto Endpoint Check',
+                     method: method,
+                     url: url,
+                     assertions: [{ type: 'status', expected: expectedStatus }],
+                     headers: req.headers || {},
+                     body: req.body || {}
+                  }]
+               };
+
+               const job = await monitoringModel.createMonitoringJob(jobData);
+               await monitoringQueue.add(`monitoring_job_${job.id}`, { jobId: job.id }, { repeat: repeatOptions });
+               await monitoringQueue.add(`monitoring_job_manual_${job.id}`, { jobId: job.id }, { jobId: `manual_${job.id}_${Date.now()}` });
+
+               createdJobs.push(job);
+           }
+       } else {
+           // ── Fallback: no test cases available, use endpoint definitions ──
+           //    This handles older generated tests that may not have test.tests
+           let endpointsToMonitor = [];
+
+           if (test.endpoint && test.endpoint.path) {
+               endpointsToMonitor.push(test.endpoint);
+           } else if (test.request_options && test.request_options.endpoints) {
+               endpointsToMonitor = test.request_options.endpoints;
+           }
+
+           for (const ep of endpointsToMonitor) {
+               if (!ep.path) continue;
+
+               const method = ep.method || 'GET';
+               const pathBase = ep.path.split('?')[0];
+               const key = `${method} ${pathBase}`;
+
+               if (createdKeys.has(key)) continue;
+               createdKeys.add(key);
+
+               const baseUrl = ep.base_url || (env ? env.base_url : '') || suiteBaseUrl;
+               const url = baseUrl + (ep.path.startsWith('/') ? ep.path : `/${ep.path}`);
+
+               const jobData = {
+                  user_id,
+                  suite_id,
+                  name: `Monitor: ${method} ${pathBase}`,
+                  description: `Auto-synced from Generated Test ${test._id}`,
+                  schedule_interval: '5m',
+                  failure_threshold: 3,
+                  target_environment_id: finalEnvId || null,
+                  test_case_definitions: [{
+                     name: 'Auto Endpoint Check',
+                     method: method,
+                     url: url,
+                     assertions: [{ type: 'status', expected: '200' }],
+                     headers: ep.headers || {},
+                     body: test.request_options?.body || {}
+                  }]
+               };
+
+               const job = await monitoringModel.createMonitoringJob(jobData);
+               await monitoringQueue.add(`monitoring_job_${job.id}`, { jobId: job.id }, { repeat: repeatOptions });
+               await monitoringQueue.add(`monitoring_job_manual_${job.id}`, { jobId: job.id }, { jobId: `manual_${job.id}_${Date.now()}` });
+
+               createdJobs.push(job);
+           }
        }
     }
     

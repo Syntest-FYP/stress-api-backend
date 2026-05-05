@@ -35,10 +35,10 @@ const buildEnvVariables = (env) => {
         ? JSON.parse(env.auth_config)
         : env.auth_config;
       if (auth) {
-        if (auth.token)         vars.token         = vars.token         || auth.token;
-        if (auth.access_token)  vars.access_token  = vars.access_token  || auth.access_token;
-        if (auth.api_key)       vars.api_key        = vars.api_key       || auth.api_key;
-        if (auth.bearer_token)  vars.bearer_token  = vars.bearer_token  || auth.bearer_token;
+        if (auth.token) vars.token = vars.token || auth.token;
+        if (auth.access_token) vars.access_token = vars.access_token || auth.access_token;
+        if (auth.api_key) vars.api_key = vars.api_key || auth.api_key;
+        if (auth.bearer_token) vars.bearer_token = vars.bearer_token || auth.bearer_token;
       }
     } catch (e) {
       console.warn('[dataProvider] Failed to parse env.auth_config:', e.message);
